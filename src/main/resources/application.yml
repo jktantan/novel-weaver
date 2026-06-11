@@ -1,0 +1,50 @@
+# ── Server ──
+server:
+  port: 8080
+
+logging:
+  level:
+    org.flywaydb: DEBUG
+
+# ── Spring AI MCP Server ──
+spring:
+  ai:
+    mcp:
+      server:
+        name: novel-weaver-gateway
+        version: 0.1.0
+        protocol: STATELESS
+        type: SYNC
+        capabilities:
+          tool: true
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/novel_weaver}
+    username: ${SPRING_DATASOURCE_USERNAME:weaver}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 600000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USER:neo4j}
+      password: ${NEO4J_PASSWORD:change-me}
+
+# ── Novel Weaver 外部服务 ──
+novel:
+  meili:
+    url: ${MEILI_URL:http://localhost:7700}
+    master-key: ${MEILI_MASTER_KEY:change-me}
+  languagetool:
+    url: ${LANGUAGETOOL_URL:http://localhost:8010/v2}

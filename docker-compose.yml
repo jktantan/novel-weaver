@@ -1,0 +1,46 @@
+# ══════════════════════════════════════════════════════════
+# Novel Weaver Gateway — MCP 入口服务
+# 启动: docker compose up -d --build
+# 前提: 数据层服务已运行且在同一网络 novel-weaver-network
+# ══════════════════════════════════════════════════════════
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: novel-weaver-gateway:0.1.0
+    container_name: nw-gateway
+    restart: unless-stopped
+    networks:
+      - novel-weaver-network
+    ports:
+      - "${GATEWAY_PORT:-8883}:8080"
+    env_file:
+      - .env
+    environment:
+      # PostgreSQL
+      SPRING_DATASOURCE_URL: jdbc:postgresql://nw-postgres:5432/${PG_DB:-novel_weaver}
+      SPRING_DATASOURCE_USERNAME: ${PG_USER:-weaver}
+      SPRING_DATASOURCE_PASSWORD: ${PG_PASS}
+      # Neo4j
+      NEO4J_URI: bolt://nw-neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASS}
+      # Meilisearch
+      MEILI_URL: http://nw-meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      # LanguageTool
+      LANGUAGETOOL_URL: http://nw-languagetool:8010/v2
+      # JVM
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+networks:
+  novel-weaver-network:
+    external: true

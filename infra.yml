@@ -1,0 +1,101 @@
+version: "3.8"
+
+# ══════════════════════════════════════════════════════════
+# Novel Weaver — Infrastructure / 基础设施 / インフラ
+# Start before gateway: 先启动此文件 / 先に起動:
+#   docker compose -f infra.yml up -d
+# ══════════════════════════════════════════════════════════
+
+services:
+  # ── PostgreSQL 16 + pgvector ──
+  # CN 主数据存储+向量搜索 / JP 主データ保存+ベクトル検索 / EN Primary storage + vector search
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nw-postgres
+    restart: unless-stopped
+    networks: [novel-weaver-network]
+    environment:
+      POSTGRES_DB: ${PG_DB:-novel_weaver}
+      POSTGRES_USER: ${PG_USER:-weaver}
+      POSTGRES_PASSWORD: ${PG_PASS:-weaver_pass}
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-weaver} -d ${PG_DB:-novel_weaver}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Neo4j 5 Community ──
+  # CN 人物关系图数据库 / JP 人物関係グラフDB / EN Character relationship graph DB
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: nw-neo4j
+    restart: unless-stopped
+    networks: [novel-weaver-network]
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASS:-weaver_pass}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4jdata:/data
+      - neo4jlogs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASS:-weaver_pass} 'RETURN 1'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── Meilisearch 全文搜索 ──
+  # CN 模糊全文搜索 / JP 曖昧全文検索 / EN Fuzzy full-text search
+  meilisearch:
+    image: getmeili/meilisearch:v1.13
+    container_name: nw-meilisearch
+    restart: unless-stopped
+    networks: [novel-weaver-network]
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-novel-meili-master-key}
+      MEILI_ENV: production
+    ports:
+      - "${MEILI_PORT:-7700}:7700"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7700/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── LanguageTool 语法检查 ──
+  # CN 中文语法检查 / JP 文法チェック / EN Grammar check
+  languagetool:
+    image: silviof/languagetool:latest
+    container_name: nw-languagetool
+    restart: unless-stopped
+    networks: [novel-weaver-network]
+    environment:
+      JAVA_XMS: 512m
+      JAVA_XMX: 1024m
+    ports:
+      - "${LT_PORT:-8010}:8010"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8010/v2/languages || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  novel-weaver-network:
+    external: true
+
+volumes:
+  pgdata:
+  neo4jdata:
+  neo4jlogs:
+  meilidata:

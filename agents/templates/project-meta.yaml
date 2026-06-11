@@ -1,0 +1,52 @@
+# project.yaml — 项目元数据模板
+# 复制此文件到项目根目录，重命名为 project.yaml，填写后即可被 MCP 工具读取
+# 不需要的字段可以删除或留空
+
+# ═══════════ 必填 ═══════════
+name: ""                        # 项目中文名
+slug: ""                        # 英文 slug（用于 API 路径，如 yideiming）
+type: original                  # original | fanfic
+status: active                  # active | archived | draft
+
+# ═══════════ 主角与视角 ═══════════
+protagonist: ""                 # 主角名
+pov: ""                         # 叙事视角描述（如 "主角名第三人称有限"）
+language: zh-CN                 # 写作语言
+
+# ═══════════ 故事阶段 ═══════════
+phases: []
+  # - name: 第一卷
+  #   chapters: [1, 2, 3]
+  # - name: 第二卷
+  #   chapters: [4, 5, 6]
+
+# ═══════════ 同人小说专有字段 ═══════════
+# （type=original 时整段删除）
+# fandom: ""
+# canon_version: ""
+# canon_sources:
+#   - name: ""
+#     type: game           # game | anime | novel | movie | wiki
+#     year: 2021
+#     url: ""
+# canon_constraints:
+#   - "所有正典事件结果不可修改"
+
+# ═══════════ 原创小说专有字段 ═══════════
+# （type=fanfic 时整段删除）
+# world_type: ""            # 玄幻 / 科幻 / 都市 / 架空历史 / ...
+# magic_system: ""          # 如果有魔法/力量体系
+# era: ""                   # 时代背景描述
+
+# ═══════════ 写作约束 ═══════════
+writing_constraints:
+  chapter_word_count:
+    min: 5000
+    max: 9000
+  forbidden:
+    - "轻小说翻译腔（'呐''嘛''呢'）"
+    - "副词修饰情感（'温柔地说'）"
+  dialogue_format:
+    speech: '""'            # 对话包裹符号
+    thought: "『』"         # 内心包裹符号
+  style_fingerprint: ""     # 风格基准（如 "某作品的写作风格"）
