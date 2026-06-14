@@ -837,25 +837,26 @@ curl http://localhost:8883/health
 
 **EN**：All table field definitions in `schema-v1-flyway.sql`. Only key descriptions listed below.
 
-| 表 / Table | CN 用途 | JP 用途 | EN Purpose |
-|-----------|---------|---------|------------|
-| `projects` | 项目元信息 | プロジェクトメタ情報 | Project metadata |
-| `chapters` | 章节正文+元数据 | チャプター本文＋メタデータ | Chapter body + metadata |
-| `chapter_versions` | 每次保存的版本 | 保存ごとのバージョン | Version per save |
-| `chapter_paragraphs` | 段落级向量索引 | 段落レベルベクトル索引 | Paragraph-level vector index |
-| `character_profiles` | 角色画像 | キャラクター設定 | Character profiles |
-| `character_snapshots` | 每章后状态快照 | 章ごとの状態スナップショット | Per-chapter state snapshot |
-| `character_relationships` | 人物关系 | キャラクター関係 | Character relationships |
-| `character_voiceprints` | 声纹样本 | 声紋サンプル | Voiceprint samples |
-| `foreshadowing_index` | 伏笔登记 | 伏線管理 | Foreshadowing registry |
-| `deduction_logs` | 推演日志 | 推論ログ | Deduction logs |
-| `locations` | 地点档案 | ロケーション管理 | Location registry |
-| `timelines` | 时间线定义 | タイムライン定義 | Timeline definitions |
-| `timeline_events` | 时间线事件 | タイムラインイベント | Timeline events |
-| `canon_sources` | 正典来源 | 正典ソース | Canon sources |
-| `canon_characters` | 正典人物 | 正典キャラクター | Canon characters |
-| `canon_events` | 正典事件 | 正典イベント | Canon events |
-| `canon_relationships` | 正典关系 | 正典関係 | Canon relationships |
+| 表 / Table                 | CN 用途    | JP 用途          | EN Purpose                   |
+|---------------------------|----------|----------------|------------------------------|
+| `projects`                | 项目元信息    | プロジェクトメタ情報     | Project metadata             |
+| `chapters`                | 章节正文+元数据 | チャプター本文＋メタデータ  | Chapter body + metadata      |
+| `chapter_versions`        | 每次保存的版本  | 保存ごとのバージョン     | Version per save             |
+| `chapter_paragraphs`      | 段落级向量索引  | 段落レベルベクトル索引    | Paragraph-level vector index |
+| `character_profiles`      | 角色画像     | キャラクター設定       | Character profiles           |
+| `character_snapshots`     | 每章后状态快照  | 章ごとの状態スナップショット | Per-chapter state snapshot   |
+| `character_relationships` | 人物关系     | キャラクター関係       | Character relationships      |
+| `character_voiceprints`   | 声纹样本     | 声紋サンプル         | Voiceprint samples           |
+| `foreshadowing_index`     | 伏笔登记     | 伏線管理           | Foreshadowing registry       |
+| `deduction_logs`          | 推演日志     | 推論ログ           | Deduction logs               |
+| `locations`               | 地点档案     | ロケーション管理       | Location registry            |
+| `items`                   | 物品档案     | アイテムアーカイブ      | Item registry                |
+| `timelines`               | 时间线定义    | タイムライン定義       | Timeline definitions         |
+| `timeline_events`         | 时间线事件    | タイムラインイベント     | Timeline events              |
+| `canon_sources`           | 正典来源     | 正典ソース          | Canon sources                |
+| `canon_characters`        | 正典人物     | 正典キャラクター       | Canon characters             |
+| `canon_events`            | 正典事件     | 正典イベント         | Canon events                 |
+| `canon_relationships`     | 正典关系     | 正典関係           | Canon relationships          |
 
 ---
 
@@ -865,45 +866,48 @@ curl http://localhost:8883/health
 
 **CN**
 
-| 分类 | 工具 | 用途 |
-|------|------|------|
-| **项目管理** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | 项目 CRUD、重置、导入导出 |
-| **章节** | `chapter_sync` / `chapter_get` / `chapter_list` | 同步/获取/列出章节 |
-| **人物** | `character_save` / `character_status` / `character_snapshot` | 保存画像、查状态、记录快照 |
-| **地点** | `location_register` / `location_update` / `location_status` | 注册/更新/查询地点 |
-| **搜索** | `rag_search` / `semantic_search` / `fuzzy_search` | 语义搜索+向量搜索+模糊搜索 |
-| **图谱** | `graph_query` / `graph_path` | 查询关系图、路径 |
-| **时间线** | `timeline_create` / `timeline_event_add` / `timeline_check` | 创建时间线、添加事件、检查矛盾 |
-| **推演** | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing` | 行为推演、大纲推演、验证、伏笔登记 |
-| **正典** | `canon_import` / `canon_search` / `canon_verify` | 正典导入/搜索/审核 |
+| 分类       | 工具                                                                                                            | 用途                |
+|----------|---------------------------------------------------------------------------------------------------------------|-------------------|
+| **项目管理** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | 项目 CRUD、重置、导入导出   |
+| **章节**   | `chapter_sync` / `chapter_get` / `chapter_list`                                                               | 同步/获取/列出章节        |
+| **人物**   | `character_save` / `character_status` / `character_snapshot`                                                  | 保存画像、查状态、记录快照     |
+| **地点**   | `location_register` / `location_update` / `location_status`                                                   | 注册/更新/查询地点        |
+| **物品**   | `item_register` / `item_update` / `item_query`                                                                | 注册/更新/查询物品详情      |
+| **搜索**   | `rag_search` / `semantic_search` / `fuzzy_search`                                                             | 语义搜索+向量搜索+模糊搜索    |
+| **图谱**   | `graph_query` / `graph_path`                                                                                  | 查询关系图、路径          |
+| **时间线**  | `timeline_create` / `timeline_event_add` / `timeline_check`                                                   | 创建时间线、添加事件、检查矛盾   |
+| **推演**   | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing`                             | 行为推演、大纲推演、验证、伏笔登记 |
+| **正典**   | `canon_import` / `canon_search` / `canon_verify`                                                              | 正典导入/搜索/审核        |
 
 **JP**
 
-| 分類 | ツール | 用途 |
-|------|--------|------|
+| 分類           | ツール                                                                                                           | 用途                            |
+|--------------|---------------------------------------------------------------------------------------------------------------|-------------------------------|
 | **プロジェクト管理** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | プロジェクト CRUD、リセット、インポート/エクスポート |
-| **チャプター** | `chapter_sync` / `chapter_get` / `chapter_list` | チャプターの同期/取得/一覧 |
-| **キャラクター** | `character_save` / `character_status` / `character_snapshot` | 設定保存、状態確認、スナップショット記録 |
-| **ロケーション** | `location_register` / `location_update` / `location_status` | ロケーションの登録/更新/照会 |
-| **検索** | `rag_search` / `semantic_search` / `fuzzy_search` | 意味検索＋ベクトル検索＋あいまい検索 |
-| **グラフ** | `graph_query` / `graph_path` | 関係グラフ照会、パス検索 |
-| **タイムライン** | `timeline_create` / `timeline_event_add` / `timeline_check` | タイムライン作成、イベント追加、矛盾チェック |
-| **推論** | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing` | 行動推論、概要推論、検証、伏線登録 |
-| **正典** | `canon_import` / `canon_search` / `canon_verify` | 正典インポート/検索/確認 |
+| **チャプター**    | `chapter_sync` / `chapter_get` / `chapter_list`                                                               | チャプターの同期/取得/一覧                |
+| **キャラクター**   | `character_save` / `character_status` / `character_snapshot`                                                  | 設定保存、状態確認、スナップショット記録          |
+| **ロケーション**   | `location_register` / `location_update` / `location_status`                                                   | ロケーションの登録/更新/照会               |
+| **アイテム**     | `item_register` / `item_update` / `item_query`                                                                | アイテムの登録/更新/照会                 |
+| **検索**       | `rag_search` / `semantic_search` / `fuzzy_search`                                                             | 意味検索＋ベクトル検索＋あいまい検索            |
+| **グラフ**      | `graph_query` / `graph_path`                                                                                  | 関係グラフ照会、パス検索                  |
+| **タイムライン**   | `timeline_create` / `timeline_event_add` / `timeline_check`                                                   | タイムライン作成、イベント追加、矛盾チェック        |
+| **推論**       | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing`                             | 行動推論、概要推論、検証、伏線登録             |
+| **正典**       | `canon_import` / `canon_search` / `canon_verify`                                                              | 正典インポート/検索/確認                 |
 
 **EN**
 
-| Category | Tools | Purpose |
-|----------|-------|---------|
-| **Project Mgmt** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | Project CRUD, reset, import/export |
-| **Chapter** | `chapter_sync` / `chapter_get` / `chapter_list` | Sync/get/list chapters |
-| **Character** | `character_save` / `character_status` / `character_snapshot` | Save profile, check status, record snapshot |
-| **Location** | `location_register` / `location_update` / `location_status` | Register/update/query locations |
-| **Search** | `rag_search` / `semantic_search` / `fuzzy_search` | Semantic + vector + fuzzy search |
-| **Graph** | `graph_query` / `graph_path` | Query relationship graph, paths |
-| **Timeline** | `timeline_create` / `timeline_event_add` / `timeline_check` | Create timeline, add events, check conflicts |
-| **Deduction** | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing` | Behavior deduction, outline deduction, verify, foreshadowing |
-| **Canon** | `canon_import` / `canon_search` / `canon_verify` | Canon import/search/verify |
+| Category         | Tools                                                                                                         | Purpose                                                      |
+|------------------|---------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
+| **Project Mgmt** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | Project CRUD, reset, import/export                           |
+| **Chapter**      | `chapter_sync` / `chapter_get` / `chapter_list`                                                               | Sync/get/list chapters                                       |
+| **Character**    | `character_save` / `character_status` / `character_snapshot`                                                  | Save profile, check status, record snapshot                  |
+| **Location**     | `location_register` / `location_update` / `location_status`                                                   | Register/update/query locations                              |
+| **Item**         | `item_register` / `item_update` / `item_query`                                                                | Register/update/query items                                  |
+| **Search**       | `rag_search` / `semantic_search` / `fuzzy_search`                                                             | Semantic + vector + fuzzy search                             |
+| **Graph**        | `graph_query` / `graph_path`                                                                                  | Query relationship graph, paths                              |
+| **Timeline**     | `timeline_create` / `timeline_event_add` / `timeline_check`                                                   | Create timeline, add events, check conflicts                 |
+| **Deduction**    | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing`                             | Behavior deduction, outline deduction, verify, foreshadowing |
+| **Canon**        | `canon_import` / `canon_search` / `canon_verify`                                                              | Canon import/search/verify                                   |
 
 ### 7.2 工具原始需求 / ツール原初要件 / Tool Original Requirements
 
@@ -1287,6 +1291,30 @@ ALTER TABLE characters ADD COLUMN voice_meta JSONB DEFAULT '{}';
 
 **EN**：Main timeline + flashback line + time loop, connected via Neo4j relationships.
 
+### 13.2.1 物品图谱 / アイテムグラフ / Item Graph
+
+```
+(:Character {name:"哈利"})
+  -[:OWNS]-> (:Item {name:"隐身衣", item_type:"神器"})
+  -[:SEEKS]-> (:Item {name:"魔法石"})
+
+(:Location {name:"古灵阁"})
+  -[:CONTAINS]-> (:Item {name:"魔法石"})
+
+(:Item {name:"格兰芬多宝剑"})
+  -[:FORGED_BY]-> (:Character {name:"戈德里克·格兰芬多"})
+  -[:RELATED_TO]-> (:Item {name:"分院帽"})
+```
+
+**CN**：物品作为 Neo4j 节点，与人物（OWNS/SEEKS/FORGED_BY）、地点（CONTAINS）、其他物品（RELATED_TO）构成关系图谱。`item_query`
+返回当前图谱关联。
+
+**JP**：アイテムを Neo4j ノードとして、キャラクター（OWNS/SEEKS/FORGED_BY）、ロケーション（CONTAINS）、他アイテム（RELATED_TO）と関係グラフを構成。
+`item_query` が現在のグラフ関連を返す。
+
+**EN**：Items as Neo4j nodes, forming a relationship graph with Characters (OWNS/SEEKS/FORGED_BY), Locations (CONTAINS),
+and other Items (RELATED_TO). `item_query` returns current graph relations.
+
 ### 13.3 时间线检查 / タイムラインチェック / Timeline Check
 
 **CN**：`timeline_check` 只做规则检查，不做自动判定——标记可能的矛盾点供作者确认：
@@ -1404,6 +1432,7 @@ public class ProjectCommands {
 
 **CN**
 - [ ] Neo4j 节点/关系创建（`chapter_sync` 集成）
+- [ ] `items` 表 + `:Item` Neo4j 节点创建（`item_register` 集成）
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` 版本历史
@@ -1412,6 +1441,7 @@ public class ProjectCommands {
 
 **JP**
 - [ ] Neo4j ノード/関係作成（`chapter_sync` 統合）
+- [ ] `items` テーブル＋`:Item` Neo4j ノード作成（`item_register` 統合）
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` バージョン履歴
@@ -1420,6 +1450,7 @@ public class ProjectCommands {
 
 **EN**
 - [ ] Neo4j node/relationship creation (`chapter_sync` integration)
+- [ ] `items` table + `:Item` Neo4j node creation (`item_register` integration)
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` version history
@@ -1485,6 +1516,7 @@ public class ProjectCommands {
 
 **CN**
 - [ ] `rag_search` 可选合成（synthesize=true）
+- [ ] `items` 表 embedding 向量索引 + 语义搜索
 - [ ] 全量恢复脚本（从本地文件全量重建 DB + Meilisearch 索引）
 - [ ] Meilisearch 同义词词典（自定义角色名/地名别名映射）
 - [ ] 推演质量调优
@@ -1492,6 +1524,7 @@ public class ProjectCommands {
 
 **JP**
 - [ ] `rag_search` オプション合成（synthesize=true）
+- [ ] `items` テーブル embedding ベクトル索引＋意味検索
 - [ ] 全量復元スクリプト（ローカルファイルから DB + Meilisearch 索引を全再構築）
 - [ ] Meilisearch 同義語辞書（カスタムキャラクター名/地名エイリアス）
 - [ ] 推論品質チューニング
@@ -1499,6 +1532,7 @@ public class ProjectCommands {
 
 **EN**
 - [ ] `rag_search` optional synthesis (synthesize=true)
+- [ ] `items` table embedding vector index + semantic search
 - [ ] Full recovery script (rebuild DB + Meilisearch index from local files)
 - [ ] Meilisearch synonym dictionary (custom character/place name aliases)
 - [ ] Deduction quality tuning

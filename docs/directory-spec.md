@@ -77,16 +77,17 @@ _shared/
 
 #### 可选目录（按需存在）
 
-| 目录 | 何时存在 | 说明 |
-|------|---------|------|
-| `canon/` | 同人小说 | 正典资料——外部来源，不可修改的事实 |
-| `worldbuilding/` | 同人 + 原创 | 本故事的世界观扩展（同人=非正典设定，原创=全部设定） |
-| `characters/` | 总是 | 本故事人物画像——每个角色一个 `.md` |
-| `states/` | 总是 | 人物状态追踪（每章后更新） |
-| `foreshadowing.yaml` | 总是 | 伏笔登记 |
-| `timeline/` | 可选 | 故事时间线 |
-| `outlines/` | 总是 | 章节大纲（计划） |
-| `drafts/` | 总是 | 章节正文（成品） |
+| 目录                   | 何时存在    | 说明                          |
+|----------------------|---------|-----------------------------|
+| `canon/`             | 同人小说    | 正典资料——外部来源，不可修改的事实          |
+| `worldbuilding/`     | 同人 + 原创 | 本故事的世界观扩展（同人=非正典设定，原创=全部设定） |
+| `characters/`        | 总是      | 本故事人物画像——每个角色一个 `.md`       |
+| `states/`            | 总是      | 人物状态追踪（每章后更新）               |
+| `foreshadowing.yaml` | 总是      | 伏笔登记                        |
+| `timeline/`          | 可选      | 故事时间线                       |
+| `outlines/`          | 总是      | 章节大纲（计划）                    |
+| `drafts/`            | 总是      | 章节正文（成品）                    |
+| `items/`             | 可选      | 故事关键物品档案——每件物品一个 `.md`      |
 
 #### 3.1 `project.yaml` —— 项目元数据
 
@@ -393,18 +394,66 @@ status: draft                # draft → review → final
 
 ---
 
+#### 3.10 `items/` —— 物品档案
+
+```
+items/
+├── 圣剑·誓约.md              # 每件物品一个文件
+├── 青铜怀表.md
+└── ...
+```
+
+**物品档案模板**：
+
+```markdown
+---
+project: {project-slug}
+name: {物品名}
+item_type: {weapon/relic/token/tool/other}
+current_holder: {当前持有者}
+current_status: {正常/损坏/遗失/销毁}
+---
+
+# {物品名}
+
+## 基本信息
+| 项目 | 内容 |
+|------|------|
+| 名称 | |
+| 类型 | |
+| 外观描述 | |
+| 用途/能力 | |
+
+## 来源
+- 创造者/发现者：
+- 首次出现章节：
+- 来源事件：
+
+## 归属历史
+| 章节 | 持有者 | 事件 |
+|------|--------|------|
+| ch{N} | {角色A} | 首次出现 |
+| ch{N} | {角色B} | 赠予/丢失/抢夺 |
+```
+
+> **注意**：物品档案为可选目录。`states/current.yaml` 中的 `items` 字符串数组记录角色当前持有物品名——物品名应尽量与
+`items/` 目录下的文件名一致，以便交叉引用。
+
+---
+
 ### 四、命名规范
 
-| 对象 | 格式 | 示例 |
-|------|------|------|
-| 项目目录 | `{中文名}` 或 `{英文slug}` | `{项目名}` / `{project-slug}` |
-| 大纲文件 | `ch{NNNN}-{标题}.md` | `ch0005-第一个夜晚.md` |
-| 正文文件 | `ch{NNNN}-{标题}.md` | `ch0005-第一个夜晚.md` |
-| 人物画像 | `{角色名}.md` | `凯妮.md` |
-| 正典人物 | `{角色名}.md` | `凯妮.md` |
-| 状态快照 | `ch{NNNN}.yaml` | `ch0006.yaml` |
-| 伏笔编号 | `F{NNN}` | `F001` |
-| 世界观文件 | `{主题}.md` | `魔法体系.md` |
+| 对象    | 格式                   | 示例                         |
+|-------|----------------------|----------------------------|
+| 项目目录  | `{中文名}` 或 `{英文slug}` | `{项目名}` / `{project-slug}` |
+| 大纲文件  | `ch{NNNN}-{标题}.md`   | `ch0005-第一个夜晚.md`          |
+| 正文文件  | `ch{NNNN}-{标题}.md`   | `ch0005-第一个夜晚.md`          |
+| 人物画像  | `{角色名}.md`           | `凯妮.md`                    |
+| 物品档案  | `{物品名}.md`           | `圣剑·誓约.md`                 |
+| 正典人物  | `{角色名}.md`           | `凯妮.md`                    |
+| 状态快照  | `ch{NNNN}.yaml`      | `ch0006.yaml`              |
+| 伏笔编号  | `F{NNN}`             | `F001`                     |
+| 世界观文件 | `{主题}.md`            | `魔法体系.md`                  |
 
 **注意**：大纲和正文使用相同文件名格式，但**分属不同目录**（`outlines/` vs `drafts/`）——不会混淆。
 
@@ -435,6 +484,7 @@ status: draft                # draft → review → final
 ├── foreshadowing.yaml              ├── foreshadowing.yaml
 ├── timeline/                       ├── timeline/
 ├── outlines/                       ├── outlines/
+├── items/     ← 可选              ├── items/   ← 可选
 └── drafts/                         └── drafts/
 ```
 
@@ -451,8 +501,9 @@ status: draft                # draft → review → final
 7. [ ] 创建 `foreshadowing.yaml`（空数组）
 8. [ ] 创建 `states/current.yaml`（空）
 9. [ ] 定义主要角色 → 每人一个 `.md` 写入 `characters/`
-10. [ ] 调用 MCP `project_init` 工具 → 服务端创建项目记录
-11. [ ] 开始写 `总纲.md` → 开始写作
+10. [ ] 如有重要物品：创建 `items/` 目录 → 每件物品一个 `.md` 写入 `items/`
+11. [ ] 调用 MCP `project_init` 工具 → 服务端创建项目记录
+12. [ ] 开始写 `总纲.md` → 开始写作
 
 ---
 
@@ -527,16 +578,17 @@ _shared/
 
 #### オプションディレクトリ（必要に応じて存在）
 
-| ディレクトリ | 存在条件 | 説明 |
-|-------------|---------|------|
-| `canon/` | 二次創作 | 正典資料——外部ソース、変更不可の事実 |
-| `worldbuilding/` | 二次創作＋オリジナル | 本作の世界観拡張（二次創作＝非正典設定、オリジナル＝全設定） |
-| `characters/` | 常に | 本作のキャラクター設定——各キャラクター一つの `.md` |
-| `states/` | 常に | キャラクター状態追跡（章ごとに更新） |
-| `foreshadowing.yaml` | 常に | 伏線管理 |
-| `timeline/` | オプション | ストーリー時系列 |
-| `outlines/` | 常に | チャプター概要（計画） |
-| `drafts/` | 常に | チャプター本文（成果物） |
+| ディレクトリ               | 存在条件       | 説明                             |
+|----------------------|------------|--------------------------------|
+| `canon/`             | 二次創作       | 正典資料——外部ソース、変更不可の事実            |
+| `worldbuilding/`     | 二次創作＋オリジナル | 本作の世界観拡張（二次創作＝非正典設定、オリジナル＝全設定） |
+| `characters/`        | 常に         | 本作のキャラクター設定——各キャラクター一つの `.md`  |
+| `states/`            | 常に         | キャラクター状態追跡（章ごとに更新）             |
+| `foreshadowing.yaml` | 常に         | 伏線管理                           |
+| `timeline/`          | オプション      | ストーリー時系列                       |
+| `outlines/`          | 常に         | チャプター概要（計画）                    |
+| `drafts/`            | 常に         | チャプター本文（成果物）                   |
+| `items/`             | オプション      | 物語の重要アイテムアーカイブ——各アイテム1つの `.md` |
 
 #### 3.1 `project.yaml` —— プロジェクトメタデータ
 
@@ -843,18 +895,66 @@ status: draft                # draft → review → final
 
 ---
 
+#### 3.10 `items/` —— アイテムアーカイブ
+
+```
+items/
+├── 圣剑·誓约.md              # 各アイテム1つのファイル
+├── 青铜怀表.md
+└── ...
+```
+
+**アイテムアーカイブテンプレート**：
+
+```markdown
+---
+project: {project-slug}
+name: {アイテム名}
+item_type: {weapon/relic/token/tool/other}
+current_holder: {現在の所持者}
+current_status: {正常/破損/紛失/破壊}
+---
+
+# {アイテム名}
+
+## 基本情報
+| 項目 | 内容 |
+|------|------|
+| 名称 | |
+| タイプ | |
+| 外観説明 | |
+| 用途/能力 | |
+
+## 来歴
+- 創造者/発見者：
+- 初登場章：
+- 来歴イベント：
+
+## 所有履歴
+| 章 | 所持者 | イベント |
+|------|--------|------|
+| ch{N} | {キャラA} | 初登場 |
+| ch{N} | {キャラB} | 贈与/紛失/強奪 |
+```
+
+> **注意**：アイテムアーカイブはオプション。`states/current.yaml` の `items` 文字列配列はキャラクターの現在所持アイテム名を記録——アイテム名は
+`items/` ディレクトリのファイル名と一致させることで相互参照可能。
+
+---
+
 ### 四、命名規則
 
-| 対象 | フォーマット | 例 |
-|------|-------------|-----|
+| 対象           | フォーマット                  | 例                          |
+|--------------|-------------------------|----------------------------|
 | プロジェクトディレクトリ | `{中国語名}` または `{英字slug}` | `{项目名}` / `{project-slug}` |
-| 概要ファイル | `ch{NNNN}-{タイトル}.md` | `ch0005-第一个夜晚.md` |
-| 本文ファイル | `ch{NNNN}-{タイトル}.md` | `ch0005-第一个夜晚.md` |
-| キャラクター設定 | `{キャラ名}.md` | `凯妮.md` |
-| 正典キャラ | `{キャラ名}.md` | `凯妮.md` |
-| 状態スナップショット | `ch{NNNN}.yaml` | `ch0006.yaml` |
-| 伏線番号 | `F{NNN}` | `F001` |
-| 世界観ファイル | `{テーマ}.md` | `魔法体系.md` |
+| 概要ファイル       | `ch{NNNN}-{タイトル}.md`    | `ch0005-第一个夜晚.md`          |
+| 本文ファイル       | `ch{NNNN}-{タイトル}.md`    | `ch0005-第一个夜晚.md`          |
+| キャラクター設定     | `{キャラ名}.md`             | `凯妮.md`                    |
+| アイテムアーカイブ    | `{アイテム名}.md`            | `圣剑·誓约.md`                 |
+| 正典キャラ        | `{キャラ名}.md`             | `凯妮.md`                    |
+| 状態スナップショット   | `ch{NNNN}.yaml`         | `ch0006.yaml`              |
+| 伏線番号         | `F{NNN}`                | `F001`                     |
+| 世界観ファイル      | `{テーマ}.md`              | `魔法体系.md`                  |
 
 **注意**：概要と本文は同じファイル名フォーマットだが、**別ディレクトリ**（`outlines/` vs `drafts/`）に属するため混同しない。
 
@@ -885,6 +985,7 @@ status: draft                # draft → review → final
 ├── foreshadowing.yaml              ├── foreshadowing.yaml
 ├── timeline/                       ├── timeline/
 ├── outlines/                       ├── outlines/
+├── items/     ← オプション         ├── items/   ← オプション
 └── drafts/                         └── drafts/
 ```
 
@@ -901,8 +1002,9 @@ status: draft                # draft → review → final
 7. [ ] `foreshadowing.yaml`（空配列）を作成
 8. [ ] `states/current.yaml`（空）を作成
 9. [ ] 主要キャラクターを定義→各 `.md` を `characters/` に書き込み
-10. [ ] MCP `project_init` ツールを呼び出し→サーバー側にプロジェクトレコード作成
-11. [ ] `总纲.md` を書き始める→執筆開始
+10. [ ] 重要アイテムがある場合：`items/` ディレクトリを作成→各アイテム1つの `.md` を `items/` に書き込み
+11. [ ] MCP `project_init` ツールを呼び出し→サーバー側にプロジェクトレコード作成
+12. [ ] `总纲.md` を書き始める→執筆開始
 
 ---
 
@@ -977,16 +1079,17 @@ One directory per novel project. The project name can be an English slug (`yidei
 
 #### Optional Directories
 
-| Directory | When Present | Description |
-|-----------|-------------|-------------|
-| `canon/` | Fanfic | Canon materials — external sources, immutable facts |
-| `worldbuilding/` | Fanfic + Original | Worldbuilding extensions (fanfic = non-canon, original = all settings) |
-| `characters/` | Always | Character profiles — one `.md` per character |
-| `states/` | Always | Character state tracking (updated per chapter) |
-| `foreshadowing.yaml` | Always | Foreshadowing registry |
-| `timeline/` | Optional | Story timeline |
-| `outlines/` | Always | Chapter outlines (plans) |
-| `drafts/` | Always | Chapter drafts (finished work) |
+| Directory            | When Present      | Description                                                            |
+|----------------------|-------------------|------------------------------------------------------------------------|
+| `canon/`             | Fanfic            | Canon materials — external sources, immutable facts                    |
+| `worldbuilding/`     | Fanfic + Original | Worldbuilding extensions (fanfic = non-canon, original = all settings) |
+| `characters/`        | Always            | Character profiles — one `.md` per character                           |
+| `states/`            | Always            | Character state tracking (updated per chapter)                         |
+| `foreshadowing.yaml` | Always            | Foreshadowing registry                                                 |
+| `timeline/`          | Optional          | Story timeline                                                         |
+| `outlines/`          | Always            | Chapter outlines (plans)                                               |
+| `drafts/`            | Always            | Chapter drafts (finished work)                                         |
+| `items/`             | Optional          | Story key item archive — one `.md` per item                            |
 
 #### 3.1 `project.yaml` — Project Metadata
 
@@ -1293,18 +1396,66 @@ status: draft                # draft → review → final
 
 ---
 
+#### 3.10 `items/` — Item Archive
+
+```
+items/
+├── 圣剑·誓约.md              # One file per item
+├── 青铜怀表.md
+└── ...
+```
+
+**Item Archive Template**:
+
+```markdown
+---
+project: {project-slug}
+name: {item-name}
+item_type: {weapon/relic/token/tool/other}
+current_holder: {current-holder}
+current_status: {normal/damaged/lost/destroyed}
+---
+
+# {Item Name}
+
+## Basic Info
+| Field | Content |
+|-------|---------|
+| Name | |
+| Type | |
+| Appearance | |
+| Usage/Ability | |
+
+## Origin
+- Creator/Discoverer:
+- First appearance chapter:
+- Origin event:
+
+## Ownership History
+| Chapter | Holder | Event |
+|---------|--------|-------|
+| ch{N} | {CharA} | First appearance |
+| ch{N} | {CharB} | Gift/loss/seizure |
+```
+
+> **Note**: Item archive is optional. The `items` string array in `states/current.yaml` records the character's
+> currently held item names — item names should match filenames in `items/` for cross-referencing.
+
+---
+
 ### IV. Naming Conventions
 
-| Object | Format | Example |
-|--------|--------|---------|
-| Project directory | `{Chinese name}` or `{English slug}` | `{project-name}` / `{project-slug}` |
-| Outline file | `ch{NNNN}-{title}.md` | `ch0005-第一个夜晚.md` |
-| Draft file | `ch{NNNN}-{title}.md` | `ch0005-第一个夜晚.md` |
-| Character profile | `{name}.md` | `凯妮.md` |
-| Canon character | `{name}.md` | `凯妮.md` |
-| State snapshot | `ch{NNNN}.yaml` | `ch0006.yaml` |
-| Foreshadowing code | `F{NNN}` | `F001` |
-| Worldbuilding file | `{topic}.md` | `魔法体系.md` |
+| Object             | Format                               | Example                             |
+|--------------------|--------------------------------------|-------------------------------------|
+| Project directory  | `{Chinese name}` or `{English slug}` | `{project-name}` / `{project-slug}` |
+| Outline file       | `ch{NNNN}-{title}.md`                | `ch0005-第一个夜晚.md`                   |
+| Draft file         | `ch{NNNN}-{title}.md`                | `ch0005-第一个夜晚.md`                   |
+| Character profile  | `{name}.md`                          | `凯妮.md`                             |
+| Item archive       | `{item-name}.md`                     | `圣剑·誓约.md`                          |
+| Canon character    | `{name}.md`                          | `凯妮.md`                             |
+| State snapshot     | `ch{NNNN}.yaml`                      | `ch0006.yaml`                       |
+| Foreshadowing code | `F{NNN}`                             | `F001`                              |
+| Worldbuilding file | `{topic}.md`                         | `魔法体系.md`                           |
 
 **Note**: Outlines and drafts use the same filename format but belong to **different directories** (`outlines/` vs `drafts/`) — no confusion.
 
@@ -1335,6 +1486,7 @@ Fanfic ({project-name})                  Original ({project-name})
 ├── foreshadowing.yaml              ├── foreshadowing.yaml
 ├── timeline/                       ├── timeline/
 ├── outlines/                       ├── outlines/
+├── items/     ← optional           ├── items/   ← optional
 └── drafts/                         └── drafts/
 ```
 
@@ -1351,5 +1503,6 @@ Fanfic ({project-name})                  Original ({project-name})
 7. [ ] Create `foreshadowing.yaml` (empty array)
 8. [ ] Create `states/current.yaml` (empty)
 9. [ ] Define main characters → write one `.md` each in `characters/`
-10. [ ] Call MCP `project_init` tool → create project record on server
-11. [ ] Start writing `总纲.md` → begin writing
+10. [ ] If key items exist: create `items/` directory → write one `.md` per item in `items/`
+11. [ ] Call MCP `project_init` tool → create project record on server
+12. [ ] Start writing `总纲.md` → begin writing

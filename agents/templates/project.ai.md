@@ -20,6 +20,7 @@ style/prompts.md                       ← 推演模板（卡文时使用）
 canon/timeline.md（同人小说）          ← 确认正典时间线位置
 states/current.yaml                    ← 确认各人物"当前位置"
 foreshadowing.yaml                     ← 检查是否有需要回收的伏笔
+items/{物品名}.md                       ← 本章涉及的关键物品（如有）
 ```
 
 **🔴 最优先规则：章节大纲 > 画像文件。** 大纲有明确规定的，以大纲为准。
@@ -85,50 +86,102 @@ mcp__novel-mcp-server__deduce_behavior
 
 ## 四、工作流程
 
+> 🔴 完整流程参见 `agents/reasonix/chapter-write.md`（Reasonix）或 `agents/claude/chapter-write.md`（Claude）。
+> 以下是日常写作时的核心步骤速查。
+
 ### 写大纲时
-1. **查 MCP** — 调 `rag_search` 搜索已有内容做上下文（客户端本地 Ollama bge-m3 做 embedding）
-2. 读设定（角色画像 + 世界规则 + 当前状态）
-3. 读本章涉及的正典事件（同人小说）
-4. 写大纲 → 标注伏笔来源和叙事目的
-5. 更新 MCP：`chapter_sync`（若需要记录大纲版本）
+
+1. **查数据库** — `rag_search`（语义搜索已有内容）+ `deduce_outline`（推演大纲）
+2. **读本地** — `outlines/总纲.md` + `characters/` + `items/` + `locations/` + `foreshadowing.yaml` +
+   `canon/timeline.md`
+3. **读模板** — `agents/templates/chapter-outline.md`
+4. **写大纲** → 标注伏笔来源和叙事目的 → 写入 `outlines/ch{NNNN}-{标题}.md`
+5. **用户确认** → 定稿后（可选）`chapter_sync` 记录大纲版本
 
 ### 写正文时
-1. **查 MCP** — 调 `rag_search` + `character_status` 获取最新上下文（embedding 本地做）
-2. 读设定 + 读对应大纲
-3. 读 `style/tone.md` 确认声线
-4. 写正文
-5. 写完后用 AI 审查：反AI检查 + 角色一致性 + 声线检查
+
+1. **查数据库** — `rag_search` + `character_status`（所有出场角色）+ `item_query`（涉及物品）+ `location_status`（涉及地点）+
+   `timeline_check` + `deduce_behavior`（卡文时）
+2. **读本地** — 🔴 大纲 `outlines/ch{NNNN}.md` 最优先 → `characters/` → `items/` → `locations/` → `states/current.yaml` →
+   `foreshadowing.yaml` → `style/tone.md`
+3. **写作** — 按大纲场景顺序，用 `{lang}` 语言，遵守写作铁律
+4. **写入** — `chapters/ch{NNNN}-{标题}.md`
+5. **审核** — 反AI检查 + 角色一致性 + 字数（参照 `style/review.md`）
+
+### 每章写完后（🔴 必须）
+
+1. **同步正文** — `chapter_sync`（含 characters/items 列表，客户端本地 bge-m3 embedding）
+2. **记录状态** — 每个出场角色调一次 `character_snapshot`
+   🔴 `summary` 由 AI 从已写内容提取该角色本章动态（1-2 句），不需要额外调 LLM
+3. **登记伏笔** — 有新伏笔 → `register_foreshadowing`
+4. **更新物品** — 物品状态变化 → `item_update`
+5. **更新地点** — 地点状态变化 → `location_update`
+6. **检查时间线** — `timeline_check`
+7. **更新本地** — `states/ch{NNNN}.yaml` + `states/current.yaml` + `foreshadowing.yaml`
+8. **字数核对** — 确认在 {min}-{max} 范围内
 
 ### 修改时
-1. 先调 `rag_search` 确认要改的内容在整个故事中的上下文
-2. 读原文 → 读设定 → 对照检查后修改
 
-### 每章写完后
-1. **更新 `states/current.yaml`** — 更新所有涉及人物的状态
-2. **反向核对人物画像** — 正文中的人物互动与画像预期不一致时：
-   - 无意偏离 → 改正文
-   - 角色自然走新方向 → 更新画像，在 `characters/{角色名}.md` 末尾追加 `### 正文补充（第XXXX章后）`
-3. **如有新伏笔 → 登记到 `foreshadowing.yaml`**
-4. **字数核对** — 确认在范围内。不在→调整
-5. **同步到 MCP** — 调 `chapter_sync` 和 `character_snapshot`
+1. `rag_search` + `chapter_get` → 拉当前章节
+2. 读 `chapters/ch{NNNN}.md` + 相关设定
+3. 改正文（本地）
+4. `chapter_sync`（生成新版本）
+5. 人物状态变了 → `character_snapshot`
+
+### 关键原则
+
+| 原则          | 说明                                 |
+|-------------|------------------------------------|
+| **大纲优先**    | 大纲有规定的以大纲为准                        |
+| **先查后写**    | rag_search + character_status 必须先调 |
+| **写完即审**    | 审核是步骤的一部分                          |
+| **一次性入库**   | 整章写完再批量调 MCP                       |
+| **本地+DB双写** | chapters/states 与 MCP 数据库同步更新      |
 
 ---
 
 ## 五、可用 MCP 工具
 
-> **embedding 注意**：`rag_search` 和 `chapter_sync` 的向量由**客户端本地调 Ollama bge-m3** 生成。
+> 🔴 **Embedding 关键规则**：`rag_search`、`semantic_search`、`chapter_sync` 的向量由**写作机本地 Ollama** 生成。
+> 模型名称和地址在项目根目录的 `ollama-config.yaml` 中配置（与 `project.yaml` 同级，默认 `embedding_model: bge-m3`，
+`ollama_host: localhost`，`ollama_port: 11434`）。
 > MCP 服务端不调任何 LLM，只存向量和做 pgvector 检索。
+>
+> **调用方式**：
+> ```
+> POST http://{ollama_host}:{ollama_port}/api/embed
+> {"model":"{embedding_model}","input":"要向量化的文本"}
+> → 返回 {"embeddings":[[0.123, -0.456, ...]]} → 取 embeddings[0]
+> ```
+>
+> - `rag_search`/`semantic_search`：对**查询文本**调 `/api/embed`，结果传入 `embedding` 参数
+> - `chapter_sync`：正文分段（500-800字/段）→ 每段调 `/api/embed` → 向量列表传入 `embeddings` 参数
+>
+> 🟡 **可选：轻量摘要模型** — 如果 `ollama-config.yaml` 中配置了 `summary_model`（如 `qwen2.5:3b`）：
+> ```
+> POST http://{ollama_host}:{ollama_port}/api/generate
+> {"model":"{summary_model}","prompt":"为角色{角色名}在本章的表现写一行摘要","stream":false}
+> → 返回的 response 字段作为 summary
+> ```
+> 如果 `summary_model` 为空，AI 自行从已写内容提取 1-2 句。
+> 效果不好时直接去掉这个能力，不影响核心功能。
 
-| 工具 | 用途 | 何时调用 | 嵌入 |
-|------|------|---------|------|
-| `rag_search` | 语义搜索已写内容 | 🔴 **写作前必调** | 客户端本地 bge-m3 |
-| `fuzzy_search` | 关键词模糊搜索 | 查角色/地点在哪章出现 | 不需要 |
-| `deduce_behavior` | 推演角色行为 | 卡文时辅助（自动拉取上下文） | 不需要 |
-| `deduce_outline` | 推演章节大纲 | 大纲不清晰时 | 不需要 |
-| `chapter_sync` | 同步章节到 DB | 🔴 **每章写完后必调** | 客户端本地 bge-m3 |
-| `character_snapshot` | 记录人物状态 | 🔴 **每章写完后必调** | 不需要 |
-| `register_foreshadowing` | 登记伏笔 | 有新伏笔时 | 不需要 |
-| `timeline_check` | 检查时间线矛盾 | 定期 | 不需要 |
+| 工具                       | 用途                           | 何时调用           |    需要 embedding    |
+|--------------------------|------------------------------|----------------|:------------------:|
+| `rag_search`             | 语义搜索已写内容                     | 🔴 **写作前必调**   | ✅ 查询文本 → embedding |
+| `semantic_search`        | 纯向量搜索                        | 需要精确向量匹配时      | ✅ 查询文本 → embedding |
+| `fuzzy_search`           | 关键词模糊搜索                      | 查角色/地点在哪章出现    |         ❌          |
+| `deduce_behavior`        | 推演角色行为                       | 卡文时辅助（自动拉取上下文） |         ❌          |
+| `deduce_outline`         | 推演章节大纲                       | 大纲不清晰时         |         ❌          |
+| `chapter_sync`           | 同步章节到 DB                     | 🔴 **每章写完后必调** | ✅ 段落文本 → embedding |
+| `character_snapshot`     | 记录人物状态（summary 由 AI 从已写内容提取） | 🔴 **每章写完后必调** |         ❌          |
+| `register_foreshadowing` | 登记伏笔                         | 有新伏笔时          |         ❌          |
+| `item_query`             | 查询物品详情+关联图谱                  | 涉及重要物品时        |         ❌          |
+| `item_register`          | 注册新物品                        | 引入新物品时         |         ❌          |
+| `item_update`            | 更新物品状态/持有者                   | 物品归属变化时        |         ❌          |
+| `location_status`        | 查询地点状态                       | 涉及特定地点时        |         ❌          |
+| `location_update`        | 更新地点状态                       | 地点发生变化时        |         ❌          |
+| `timeline_check`         | 检查时间线矛盾                      | 每章写完后          |         ❌          |
 
 ---
 

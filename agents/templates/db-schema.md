@@ -8,20 +8,22 @@
 
 ## 表总览
 
-| 表名 | 对应 MCP 工具 | 核心用途 |
-|------|-------------|---------|
-| `chapters` | `chapter_sync`、`chapter_get` | 章节正文和元数据 |
-| `chapter_paragraphs` | `rag_search`、`semantic_search` | 段落级语义索引 |
-| `character_profiles` | `character_save` | 人物画像基础信息 |
-| `character_snapshots` | `character_snapshot`、`character_status` | 角色状态快照历史 |
-| `foreshadowing_index` | `register_foreshadowing` | 伏笔登记和回收追踪 |
-| `timelines` | `timeline_create` | 时间线定义 |
-| `timeline_events` | `timeline_event_add`、`timeline_check` | 时间线事件和矛盾检测 |
-| `canon_characters` | `canon_import`、`canon_search` | 正典人物 |
-| `canon_events` | `canon_import`、`canon_search` | 正典事件 |
-| `character_relationships` | `graph_query`、`graph_path` | 人物关系图 |
-| `deduction_logs` | `deduce_behavior`、`deduce_outline` | 推演记录 |
-| `review_logs` | （预留） | 审查记录 |
+| 表名                        | 对应 MCP 工具                                               | 核心用途             |
+|---------------------------|---------------------------------------------------------|------------------|
+| `chapters`                | `chapter_sync`、`chapter_get`                            | 章节正文和元数据         |
+| `chapter_paragraphs`      | `rag_search`、`semantic_search`                          | 段落级语义索引          |
+| `character_profiles`      | `character_save`                                        | 人物画像基础信息         |
+| `character_snapshots`     | `character_snapshot`、`character_status`                 | 角色状态快照历史         |
+| `foreshadowing_index`     | `register_foreshadowing`                                | 伏笔登记和回收追踪        |
+| `timelines`               | `timeline_create`                                       | 时间线定义            |
+| `timeline_events`         | `timeline_event_add`、`timeline_check`                   | 时间线事件和矛盾检测       |
+| `canon_characters`        | `canon_import`、`canon_search`                           | 正典人物             |
+| `canon_events`            | `canon_import`、`canon_search`                           | 正典事件             |
+| `character_relationships` | `graph_query`、`graph_path`                              | 人物关系图            |
+| `deduction_logs`          | `deduce_behavior`、`deduce_outline`                      | 推演记录             |
+| `locations`               | `location_register`、`location_update`、`location_status` | 地点档案             |
+| `items`                   | `item_register`、`item_update`、`item_query`              | 物品档案——外观、来源、归属历史 |
+| `review_logs`             | （预留）                                                    | 审查记录             |
 
 ---
 
@@ -78,6 +80,38 @@
 | `f_type` | varchar | 类型：🔮情感/🎭身份/🎯事件/💡道具 |
 | `planted_chapter` | int | 埋设章节号 |
 | `status` | varchar | active / triggered / closed |
+
+### locations（地点档案）
+
+| 字段                  | 类型    | 说明                |
+|---------------------|-------|-------------------|
+| `id`                | UUID  | 主键                |
+| `project_id`        | UUID  | 所属项目              |
+| `name`              | text  | 地点名称              |
+| `location_type`     | text  | 类型（自然场景/建筑/聚落/室内） |
+| `canon_description` | text  | 正典/原始设定           |
+| `actual_appearance` | text  | 实际外观              |
+| `change_log`        | jsonb | 变更历史              |
+| `current_status`    | text  | 当前状态              |
+
+### items（物品档案）
+
+| 字段                 | 类型           | 说明                                                             |
+|--------------------|--------------|----------------------------------------------------------------|
+| `id`               | UUID         | 主键                                                             |
+| `project_id`       | UUID         | 所属项目                                                           |
+| `name`             | text         | 物品名称                                                           |
+| `item_type`        | text         | 类型（武器/信物/神器/日常品/其他）                                            |
+| `description`      | text         | 外观与功能描述                                                        |
+| `origin`           | text         | 来源（谁造的、哪发现的）                                                   |
+| `significance`     | text         | 剧情意义/用途                                                        |
+| `properties`       | jsonb        | 自定义属性（如魔法能力）                                                   |
+| `current_holder`   | text         | 当前持有者名                                                         |
+| `current_location` | text         | 当前位置                                                           |
+| `current_status`   | text         | 当前状态（正常/损坏/遗失/销毁）                                              |
+| `first_chapter`    | int          | 首次出现章节                                                         |
+| `owner_history`    | jsonb        | 归属变更历史 `[{"chapter":1,"from":"...","to":"...","event":"..."}]` |
+| `embedding`        | vector(1024) | bge-m3 向量（语义搜索）                                                |
 
 ---
 

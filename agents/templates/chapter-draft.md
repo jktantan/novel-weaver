@@ -2,14 +2,15 @@
 project: {project-slug}
 type: draft
 chapter: {number}
-title: {标题}
-phase: {阶段名}
+title: {title}
+phase: {phase}
 characters: []
+items: []
 location: ""
 word_count: 0
 status: draft
 ---
 
-# 第{NNNN}章 {标题}
+# {chapter-heading}
 
-（正文）
+（Write in {lang}）

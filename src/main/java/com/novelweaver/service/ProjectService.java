@@ -54,6 +54,7 @@ public class ProjectService {
             "universe_relations",
             "universes",
             "locations",
+            "items",
             "chapters",
     };
     // ── Tables with indirect FK (no project_id) — join via parent table ──
@@ -217,6 +218,9 @@ public class ProjectService {
             neo4j.query("MATCH (ch:Chapter {project_id: $pid}) DETACH DELETE ch")
                     .bind(projectId).to("pid")
                     .run();
+            neo4j.query("MATCH (it:Item {project_id: $pid}) DETACH DELETE it")
+                    .bind(projectId).to("pid")
+                    .run();
             neo4j.query("MATCH (pr:Project {project_id: $pid}) DETACH DELETE pr")
                     .bind(projectId).to("pid")
                     .run();
@@ -265,6 +269,7 @@ public class ProjectService {
                 "chapters",
                 "character_profiles",
                 "locations",
+                "items",
                 "projects"
         );
         for (String table : allTables) {
@@ -480,6 +485,31 @@ public class ProjectService {
                 }).toList();
         data.put("locations", locationList);
 
+        // 7b. 物品档案
+        List<Map<String, Object>> itemList = em.createNativeQuery(
+                        "SELECT name, item_type, description, origin, significance, properties::text, " +
+                                "current_holder, current_location, current_status, first_chapter, owner_history::text " +
+                                "FROM items WHERE project_id = ?1 ORDER BY name")
+                .setParameter(1, pid)
+                .getResultList()
+                .stream().map(row -> {
+                    Object[] r = (Object[]) row;
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("name", r[0]);
+                    m.put("item_type", r[1]);
+                    m.put("description", r[2]);
+                    m.put("origin", r[3]);
+                    m.put("significance", r[4]);
+                    tryParseJsonToField(m, "properties", (String) r[5]);
+                    m.put("current_holder", r[6]);
+                    m.put("current_location", r[7]);
+                    m.put("current_status", r[8]);
+                    m.put("first_chapter", r[9]);
+                    tryParseJsonToField(m, "owner_history", (String) r[10]);
+                    return m;
+                }).toList();
+        data.put("items", itemList);
+
         // 8. 正典走向追踪
         List<Map<String, Object>> canonStatusList = em.createNativeQuery(
                         "SELECT ces.status, ces.actual_description, ces.occurred_in_chapter, ces.divergence_reason, " +
@@ -509,7 +539,7 @@ public class ProjectService {
         }
 
         return new ProjectExportResult(pidStr, "ok", json, chaptersList.size(), charList.size(), foreshadows.size(),
-                timelines.size(), tlEvents.size(), locationList.size());
+                timelines.size(), tlEvents.size(), locationList.size(), itemList.size());
     }
 
 
@@ -704,6 +734,41 @@ public class ProjectService {
             lc++;
         }
 
+        // 7b. 物品档案
+        int it = 0;
+        List<Map<String, Object>> itemListData = safeGetList(data, "items");
+        for (Map<String, Object> im : itemListData) {
+            String itemName = (String) im.get("name");
+            if (itemName == null) continue;
+            String propsJson = safeToJsonString(im.get("properties"));
+            String histJson = safeToJsonString(im.get("owner_history"));
+            em.createNativeQuery(
+                            "INSERT INTO items (id, project_id, name, item_type, description, origin, significance, " +
+                                    "properties, current_holder, current_location, current_status, first_chapter, " +
+                                    "owner_history, created_at, updated_at) " +
+                                    "VALUES (gen_random_uuid(), :pid, :name, :type, :desc, :origin, :sig, " +
+                                    "CAST(:props AS jsonb), :holder, :loc, :status, :fc, CAST(:hist AS jsonb), now(), now()) " +
+                                    "ON CONFLICT (project_id, name) DO UPDATE SET " +
+                                    "description=EXCLUDED.description, origin=EXCLUDED.origin, " +
+                                    "current_holder=EXCLUDED.current_holder, current_location=EXCLUDED.current_location, " +
+                                    "current_status=EXCLUDED.current_status, owner_history=EXCLUDED.owner_history, " +
+                                    "properties=EXCLUDED.properties, updated_at=now()")
+                    .setParameter("pid", pid)
+                    .setParameter("name", itemName)
+                    .setParameter("type", im.get("item_type"))
+                    .setParameter("desc", im.get("description"))
+                    .setParameter("origin", im.get("origin"))
+                    .setParameter("sig", im.get("significance"))
+                    .setParameter("props", propsJson)
+                    .setParameter("holder", im.get("current_holder"))
+                    .setParameter("loc", im.get("current_location"))
+                    .setParameter("status", im.get("current_status"))
+                    .setParameter("fc", im.get("first_chapter"))
+                    .setParameter("hist", histJson)
+                    .executeUpdate();
+            it++;
+        }
+
         // 8. 正典走向追踪
         List<Map<String, Object>> cesList = safeGetList(data, "canon_event_status");
         for (Map<String, Object> ces : cesList) {
@@ -740,7 +805,7 @@ public class ProjectService {
             log.warn("Neo4j import update failed for project {}", projectId, ex);
         }
 
-        return new ProjectImportResult(projectId, "ok", ch, cp, fs, tl, te, lc);
+        return new ProjectImportResult(projectId, "ok", ch, cp, fs, tl, te, lc, it);
     }
 
     // ── 辅助方法 ──
@@ -793,10 +858,10 @@ public class ProjectService {
     }
 
     public record ProjectExportResult(String projectId, String status, String json, int chapters, int characters,
-                                      int foreshadowing, int timelines, int timelineEvents, int locations) {
+                                      int foreshadowing, int timelines, int timelineEvents, int locations, int items) {
     }
 
     public record ProjectImportResult(String projectId, String status, int chapters, int characters, int foreshadowing,
-                                      int timelines, int timelineEvents, int locations) {
+                                      int timelines, int timelineEvents, int locations, int items) {
     }
 }

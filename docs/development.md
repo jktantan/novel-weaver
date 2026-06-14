@@ -169,38 +169,41 @@ spring.ai.mcp.server:
 
 ### 6. 30 个 MCP 工具
 
-| 分类 | 工具 | Service |
-|------|------|---------|
-| **项目管理** | `project_init` | ProjectService |
-| | `project_archive` | ProjectService |
-| | `project_delete` | ProjectService |
-| | `service_reset` | ProjectService |
-| | `project_export` | ProjectService |
-| | `project_import` | ProjectService |
-| **章节** | `chapter_sync` | ChapterService |
-| | `chapter_get` | ChapterService |
-| | `chapter_list` | ChapterService |
-| **人物** | `character_save` | CharacterService |
-| | `character_status` | CharacterService |
-| | `character_snapshot` | CharacterService |
-| **地点** | `location_register` | LocationService |
-| | `location_update` | LocationService |
-| | `location_status` | LocationService |
-| **搜索** | `rag_search` | RAGService |
-| | `semantic_search` | RAGService |
-| | `fuzzy_search` | RAGService |
-| **图谱** | `graph_query` | GraphService |
-| | `graph_path` | GraphService |
-| **时间线** | `timeline_create` | TimelineService |
-| | `timeline_event_add` | TimelineService |
-| | `timeline_check` | TimelineService |
-| **推演** | `deduce_behavior` | DeductionService |
-| | `deduce_outline` | DeductionService |
-| | `deduce_verify` | DeductionService |
-| | `register_foreshadowing` | DeductionService |
-| **正典** | `canon_import` | CanonService |
-| | `canon_search` | CanonService |
-| | `canon_verify` | CanonService |
+| 分类       | 工具                       | Service          |
+|----------|--------------------------|------------------|
+| **项目管理** | `project_init`           | ProjectService   |
+|          | `project_archive`        | ProjectService   |
+|          | `project_delete`         | ProjectService   |
+|          | `service_reset`          | ProjectService   |
+|          | `project_export`         | ProjectService   |
+|          | `project_import`         | ProjectService   |
+| **章节**   | `chapter_sync`           | ChapterService   |
+|          | `chapter_get`            | ChapterService   |
+|          | `chapter_list`           | ChapterService   |
+| **人物**   | `character_save`         | CharacterService |
+|          | `character_status`       | CharacterService |
+|          | `character_snapshot`     | CharacterService |
+| **地点**   | `location_register`      | LocationService  |
+|          | `location_update`        | LocationService  |
+|          | `location_status`        | LocationService  |
+| **物品**   | `item_register`          | ItemService      |
+|          | `item_update`            | ItemService      |
+|          | `item_query`             | ItemService      |
+| **搜索**   | `rag_search`             | RAGService       |
+|          | `semantic_search`        | RAGService       |
+|          | `fuzzy_search`           | RAGService       |
+| **图谱**   | `graph_query`            | GraphService     |
+|          | `graph_path`             | GraphService     |
+| **时间线**  | `timeline_create`        | TimelineService  |
+|          | `timeline_event_add`     | TimelineService  |
+|          | `timeline_check`         | TimelineService  |
+| **推演**   | `deduce_behavior`        | DeductionService |
+|          | `deduce_outline`         | DeductionService |
+|          | `deduce_verify`          | DeductionService |
+|          | `register_foreshadowing` | DeductionService |
+| **正典**   | `canon_import`           | CanonService     |
+|          | `canon_search`           | CanonService     |
+|          | `canon_verify`           | CanonService     |
 
 **注意**：`review` 工具已废弃。审查由客户端 AI agent 完成。
 
@@ -396,38 +399,41 @@ spring.ai.mcp.server:
 
 ### 6. 30 MCP ツール
 
-| 分類 | ツール | Service |
-|------|--------|---------|
-| **プロジェクト管理** | `project_init` | ProjectService |
-| | `project_archive` | ProjectService |
-| | `project_delete` | ProjectService |
-| | `service_reset` | ProjectService |
-| | `project_export` | ProjectService |
-| | `project_import` | ProjectService |
-| **チャプター** | `chapter_sync` | ChapterService |
-| | `chapter_get` | ChapterService |
-| | `chapter_list` | ChapterService |
-| **キャラクター** | `character_save` | CharacterService |
-| | `character_status` | CharacterService |
-| | `character_snapshot` | CharacterService |
-| **ロケーション** | `location_register` | LocationService |
-| | `location_update` | LocationService |
-| | `location_status` | LocationService |
-| **検索** | `rag_search` | RAGService |
-| | `semantic_search` | RAGService |
-| | `fuzzy_search` | RAGService |
-| **グラフ** | `graph_query` | GraphService |
-| | `graph_path` | GraphService |
-| **タイムライン** | `timeline_create` | TimelineService |
-| | `timeline_event_add` | TimelineService |
-| | `timeline_check` | TimelineService |
-| **推論** | `deduce_behavior` | DeductionService |
-| | `deduce_outline` | DeductionService |
-| | `deduce_verify` | DeductionService |
-| | `register_foreshadowing` | DeductionService |
-| **正典** | `canon_import` | CanonService |
-| | `canon_search` | CanonService |
-| | `canon_verify` | CanonService |
+| 分類           | ツール                      | Service          |
+|--------------|--------------------------|------------------|
+| **プロジェクト管理** | `project_init`           | ProjectService   |
+|              | `project_archive`        | ProjectService   |
+|              | `project_delete`         | ProjectService   |
+|              | `service_reset`          | ProjectService   |
+|              | `project_export`         | ProjectService   |
+|              | `project_import`         | ProjectService   |
+| **チャプター**    | `chapter_sync`           | ChapterService   |
+|              | `chapter_get`            | ChapterService   |
+|              | `chapter_list`           | ChapterService   |
+| **キャラクター**   | `character_save`         | CharacterService |
+|              | `character_status`       | CharacterService |
+|              | `character_snapshot`     | CharacterService |
+| **ロケーション**   | `location_register`      | LocationService  |
+|              | `location_update`        | LocationService  |
+|              | `location_status`        | LocationService  |
+| **アイテム**     | `item_register`          | ItemService      |
+|              | `item_update`            | ItemService      |
+|              | `item_query`             | ItemService      |
+| **検索**       | `rag_search`             | RAGService       |
+|              | `semantic_search`        | RAGService       |
+|              | `fuzzy_search`           | RAGService       |
+| **グラフ**      | `graph_query`            | GraphService     |
+|              | `graph_path`             | GraphService     |
+| **タイムライン**   | `timeline_create`        | TimelineService  |
+|              | `timeline_event_add`     | TimelineService  |
+|              | `timeline_check`         | TimelineService  |
+| **推論**       | `deduce_behavior`        | DeductionService |
+|              | `deduce_outline`         | DeductionService |
+|              | `deduce_verify`          | DeductionService |
+|              | `register_foreshadowing` | DeductionService |
+| **正典**       | `canon_import`           | CanonService     |
+|              | `canon_search`           | CanonService     |
+|              | `canon_verify`           | CanonService     |
 
 **注意**：`review` ツールは廃止。レビューはクライアント AI エージェントが行う。
 
@@ -623,38 +629,41 @@ spring.ai.mcp.server:
 
 ### 6. 30 MCP Tools
 
-| Category | Tool | Service |
-|----------|------|---------|
-| **Project Mgmt** | `project_init` | ProjectService |
-| | `project_archive` | ProjectService |
-| | `project_delete` | ProjectService |
-| | `service_reset` | ProjectService |
-| | `project_export` | ProjectService |
-| | `project_import` | ProjectService |
-| **Chapter** | `chapter_sync` | ChapterService |
-| | `chapter_get` | ChapterService |
-| | `chapter_list` | ChapterService |
-| **Character** | `character_save` | CharacterService |
-| | `character_status` | CharacterService |
-| | `character_snapshot` | CharacterService |
-| **Location** | `location_register` | LocationService |
-| | `location_update` | LocationService |
-| | `location_status` | LocationService |
-| **Search** | `rag_search` | RAGService |
-| | `semantic_search` | RAGService |
-| | `fuzzy_search` | RAGService |
-| **Graph** | `graph_query` | GraphService |
-| | `graph_path` | GraphService |
-| **Timeline** | `timeline_create` | TimelineService |
-| | `timeline_event_add` | TimelineService |
-| | `timeline_check` | TimelineService |
-| **Deduction** | `deduce_behavior` | DeductionService |
-| | `deduce_outline` | DeductionService |
-| | `deduce_verify` | DeductionService |
-| | `register_foreshadowing` | DeductionService |
-| **Canon** | `canon_import` | CanonService |
-| | `canon_search` | CanonService |
-| | `canon_verify` | CanonService |
+| Category         | Tool                     | Service          |
+|------------------|--------------------------|------------------|
+| **Project Mgmt** | `project_init`           | ProjectService   |
+|                  | `project_archive`        | ProjectService   |
+|                  | `project_delete`         | ProjectService   |
+|                  | `service_reset`          | ProjectService   |
+|                  | `project_export`         | ProjectService   |
+|                  | `project_import`         | ProjectService   |
+| **Chapter**      | `chapter_sync`           | ChapterService   |
+|                  | `chapter_get`            | ChapterService   |
+|                  | `chapter_list`           | ChapterService   |
+| **Character**    | `character_save`         | CharacterService |
+|                  | `character_status`       | CharacterService |
+|                  | `character_snapshot`     | CharacterService |
+| **Location**     | `location_register`      | LocationService  |
+|                  | `location_update`        | LocationService  |
+|                  | `location_status`        | LocationService  |
+| **Item**         | `item_register`          | ItemService      |
+|                  | `item_update`            | ItemService      |
+|                  | `item_query`             | ItemService      |
+| **Search**       | `rag_search`             | RAGService       |
+|                  | `semantic_search`        | RAGService       |
+|                  | `fuzzy_search`           | RAGService       |
+| **Graph**        | `graph_query`            | GraphService     |
+|                  | `graph_path`             | GraphService     |
+| **Timeline**     | `timeline_create`        | TimelineService  |
+|                  | `timeline_event_add`     | TimelineService  |
+|                  | `timeline_check`         | TimelineService  |
+| **Deduction**    | `deduce_behavior`        | DeductionService |
+|                  | `deduce_outline`         | DeductionService |
+|                  | `deduce_verify`          | DeductionService |
+|                  | `register_foreshadowing` | DeductionService |
+| **Canon**        | `canon_import`           | CanonService     |
+|                  | `canon_search`           | CanonService     |
+|                  | `canon_verify`           | CanonService     |
 
 **Note**: The `review` tool is deprecated. Review is handled by the client AI agent.
 

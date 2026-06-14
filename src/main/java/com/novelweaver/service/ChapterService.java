@@ -88,6 +88,7 @@ public class ChapterService {
             @McpToolParam(description = "正文内容", required = true) String content,
             @McpToolParam(description = "阶段", required = false) String phase,
             @McpToolParam(description = "出场角色列表", required = false) List<String> characters,
+            @McpToolParam(description = "出场物品列表", required = false) List<String> items,
             @McpToolParam(description = "段落向量（pgvector格式字符串，顺序与分段结果一致）", required = false) List<String> embeddings) {
 
         long t0 = System.currentTimeMillis();
@@ -219,6 +220,32 @@ public class ChapterService {
                 }
             } catch (Exception e) {
                 log.warn("Neo4j character appearance sync failed for chapter {}-{}", projectId, number, e);
+            }
+        }
+
+        // Neo4j: 物品出场关系
+        if (items != null && !items.isEmpty()) {
+            try {
+                for (String itemName : items) {
+                    neo4j.query("""
+                                    MERGE (it:Item {project_id: $pid, name: $name})
+                                    """)
+                            .bind(projectId).to("pid")
+                            .bind(itemName).to("name")
+                            .run();
+
+                    neo4j.query("""
+                                    MATCH (it:Item {project_id: $pid, name: $name})
+                                    MATCH (ch:Chapter {project_id: $pid, number: $num})
+                                    MERGE (it)-[:APPEARS_IN]->(ch)
+                                    """)
+                            .bind(projectId).to("pid")
+                            .bind(itemName).to("name")
+                            .bind(number).to("num")
+                            .run();
+                }
+            } catch (Exception e) {
+                log.warn("Neo4j item appearance sync failed for chapter {}-{}", projectId, number, e);
             }
         }
 

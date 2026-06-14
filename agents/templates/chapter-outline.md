@@ -2,23 +2,26 @@
 project: {project-slug}
 type: outline
 chapter: {number}
-title: {标题}
-phase: {阶段名}
+title: {title}
+phase: {phase}
 goal: ""
 characters: []
+items: []
 ---
 
-# 第{NNNN}章 {标题}
+# {chapter-heading}
 
-## 场景一：{场景名}
-（简要描述——环境、人物、发生了什么）
+## {scene-label} 1: {scene-name}
 
-## 场景二：{场景名}
+（Brief description — setting, characters, what happens）
 
-## 场景三：{场景名}
+## {scene-label} 2: {scene-name}
+
+## {scene-label} 3: {scene-name}
 
 ---
 
-## 关联文件
-- outlines/总纲.md
-- characters/xxx.md
+## Related files
+
+- outlines/{outline-file}
+- characters/{character-file}

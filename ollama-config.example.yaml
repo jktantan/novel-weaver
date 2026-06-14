@@ -1,0 +1,19 @@
+# 项目级 Ollama 客户端配置
+# ============================================================================
+# 此文件放在项目根目录，与 project.yaml、CLAUD.md 同级。
+# 不同项目可以使用不同的模型。
+# 从 novel-weaver 的 ollama-config.example.yaml 复制过来，按需修改。
+# 模型必须先下载：ollama pull {model}
+# ============================================================================
+
+# ── 必填：Embedding 模型（需支持 /api/embed 端点） ──
+embedding_model: bge-m3
+
+# ── 可选：轻量摘要 / RAG 合成模型 ──
+# 留空或不填时，摘要由 AI 自动从已写正文提取。
+# 已测试兼容：qwen2.5:3b, llama3.2:3b
+# summary_model: qwen2.5:3b
+
+# ── Ollama 服务地址 ──
+ollama_host: localhost
+ollama_port: 11434
