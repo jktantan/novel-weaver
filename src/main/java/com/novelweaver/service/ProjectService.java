@@ -377,7 +377,7 @@ public class ProjectService {
 
         // 3. 人物画像
         List<Map<String, Object>> charList = em.createNativeQuery(
-                        "SELECT name, name_jp, name_en, bio, voice, type, traits::text, voice_meta::text, status::text, basic_info::text " +
+                        "SELECT name, name_jp, name_en, bio, voice, type, traits::text, voice_meta::text, status::text, basic_info::text, identity::text " +
                                 "FROM character_profiles WHERE project_id = ?1 ORDER BY name")
                 .setParameter(1, pid)
                 .getResultList()
@@ -394,6 +394,7 @@ public class ProjectService {
                     tryParseJsonToField(m, "voice_meta", (String) r[7]);
                     tryParseJsonToField(m, "status", (String) r[8]);
                     tryParseJsonToField(m, "basic_info", (String) r[9]);
+                    tryParseJsonToField(m, "identity", (String) r[10]);
                     return m;
                 }).toList();
         data.put("characters", charList);
@@ -484,7 +485,7 @@ public class ProjectService {
         // 7. 地点档案
         List<Map<String, Object>> locationList = em.createNativeQuery(
                         "SELECT name, location_type, region, first_chapter, canon_description, actual_appearance, " +
-                                "sensory_detail, narrative_function, change_log::text, current_status " +
+                                "sensory_detail, narrative_function, change_log::text, current_status, identity::text " +
                                 "FROM locations WHERE project_id = ?1 ORDER BY name")
                 .setParameter(1, pid)
                 .getResultList()
@@ -501,6 +502,7 @@ public class ProjectService {
                     m.put("narrative_function", r[7]);
                     tryParseJsonToField(m, "change_log", (String) r[8]);
                     m.put("current_status", r[9]);
+                    tryParseJsonToField(m, "identity", (String) r[10]);
                     return m;
                 }).toList();
         data.put("locations", locationList);
@@ -508,7 +510,7 @@ public class ProjectService {
         // 7b. 物品档案
         List<Map<String, Object>> itemList = em.createNativeQuery(
                         "SELECT name, item_type, description, origin, significance, properties::text, " +
-                                "current_holder, current_location, current_status, first_chapter, owner_history::text " +
+                                "current_holder, current_location, current_status, first_chapter, owner_history::text, identity::text " +
                                 "FROM items WHERE project_id = ?1 ORDER BY name")
                 .setParameter(1, pid)
                 .getResultList()
@@ -526,6 +528,7 @@ public class ProjectService {
                     m.put("current_status", r[8]);
                     m.put("first_chapter", r[9]);
                     tryParseJsonToField(m, "owner_history", (String) r[10]);
+                    tryParseJsonToField(m, "identity", (String) r[11]);
                     return m;
                 }).toList();
         data.put("items", itemList);
@@ -617,9 +620,8 @@ public class ProjectService {
             String chName = (String) c.get("name");
             if (chName == null || chName.isBlank()) continue;
             em.createNativeQuery(
-                            "INSERT INTO character_profiles (id, project_id, name, bio, voice, type, traits, voice_meta, status, basic_info, created_at, updated_at) " +
-                                    "VALUES (gen_random_uuid(), :pid, :name, :bio, :voice, :type, CAST(:traits AS jsonb), CAST(:vmeta AS jsonb), CAST(:status AS jsonb), CAST(:binfo AS jsonb), now(), now()) " +
-                                    "ON CONFLICT (project_id, name) DO UPDATE SET bio=EXCLUDED.bio, voice=EXCLUDED.voice, traits=EXCLUDED.traits, updated_at=now()")
+                            "INSERT INTO character_profiles (id, project_id, name, bio, voice, type, traits, voice_meta, status, basic_info, identity, created_at, updated_at) " +
+                                    "VALUES (gen_random_uuid(), :pid, :name, :bio, :voice, :type, CAST(:traits AS jsonb), CAST(:vmeta AS jsonb), CAST(:status AS jsonb), CAST(:binfo AS jsonb), CAST(:identity AS jsonb), now(), now())")
                     .setParameter("pid", pid)
                     .setParameter("name", chName)
                     .setParameter("bio", c.get("bio"))
@@ -629,6 +631,7 @@ public class ProjectService {
                     .setParameter("vmeta", safeToJsonString(c.get("voice_meta")))
                     .setParameter("status", safeToJsonString(c.get("status_meta")))
                     .setParameter("binfo", safeToJsonString(c.get("basic_info")))
+                    .setParameter("identity", safeToJsonString(c.get("identity")))
                     .executeUpdate();
             cp++;
         }
@@ -737,12 +740,9 @@ public class ProjectService {
             em.createNativeQuery(
                             "INSERT INTO locations (id, project_id, name, location_type, region, first_chapter, " +
                                     "canon_description, actual_appearance, sensory_detail, narrative_function, " +
-                                    "change_log, current_status, created_at, updated_at) " +
+                                    "change_log, identity, current_status, created_at, updated_at) " +
                                     "VALUES (gen_random_uuid(), :pid, :name, :type, :region, :fc, " +
-                                    ":cd, :aa, :sd, :nf, CAST(:cl AS jsonb), :cs, now(), now()) " +
-                                    "ON CONFLICT (project_id, name) DO UPDATE SET " +
-                                    "canon_description=EXCLUDED.canon_description, actual_appearance=EXCLUDED.actual_appearance, " +
-                                    "change_log=EXCLUDED.change_log, current_status=EXCLUDED.current_status, updated_at=now()")
+                                    ":cd, :aa, :sd, :nf, CAST(:cl AS jsonb), CAST(:identity AS jsonb), :cs, now(), now())")
                     .setParameter("pid", pid)
                     .setParameter("name", locName)
                     .setParameter("type", l.get("location_type"))
@@ -753,6 +753,7 @@ public class ProjectService {
                     .setParameter("sd", l.get("sensory_detail"))
                     .setParameter("nf", l.get("narrative_function"))
                     .setParameter("cl", locChangeLog)
+                    .setParameter("identity", safeToJsonString(l.get("identity")))
                     .setParameter("cs", l.get("current_status"))
                     .executeUpdate();
             lc++;
@@ -768,15 +769,10 @@ public class ProjectService {
             String histJson = safeToJsonString(im.get("owner_history"));
             em.createNativeQuery(
                             "INSERT INTO items (id, project_id, name, item_type, description, origin, significance, " +
-                                    "properties, current_holder, current_location, current_status, first_chapter, " +
+                                    "properties, identity, current_holder, current_location, current_status, first_chapter, " +
                                     "owner_history, created_at, updated_at) " +
                                     "VALUES (gen_random_uuid(), :pid, :name, :type, :desc, :origin, :sig, " +
-                                    "CAST(:props AS jsonb), :holder, :loc, :status, :fc, CAST(:hist AS jsonb), now(), now()) " +
-                                    "ON CONFLICT (project_id, name) DO UPDATE SET " +
-                                    "description=EXCLUDED.description, origin=EXCLUDED.origin, " +
-                                    "current_holder=EXCLUDED.current_holder, current_location=EXCLUDED.current_location, " +
-                                    "current_status=EXCLUDED.current_status, owner_history=EXCLUDED.owner_history, " +
-                                    "properties=EXCLUDED.properties, updated_at=now()")
+                                    "CAST(:props AS jsonb), CAST(:identity AS jsonb), :holder, :loc, :status, :fc, CAST(:hist AS jsonb), now(), now())")
                     .setParameter("pid", pid)
                     .setParameter("name", itemName)
                     .setParameter("type", im.get("item_type"))
@@ -784,6 +780,7 @@ public class ProjectService {
                     .setParameter("origin", im.get("origin"))
                     .setParameter("sig", im.get("significance"))
                     .setParameter("props", propsJson)
+                    .setParameter("identity", safeToJsonString(im.get("identity")))
                     .setParameter("holder", im.get("current_holder"))
                     .setParameter("loc", im.get("current_location"))
                     .setParameter("status", im.get("current_status"))
@@ -860,9 +857,11 @@ public class ProjectService {
             for (Map<String, Object> c : characters) {
                 String chName = (String) c.get("name");
                 if (chName == null || chName.isBlank()) continue;
-                neo4j.query("MERGE (:Character {project_id: $pid, name: $name})")
+                String identity = safeToJsonString(c.get("identity"));
+                neo4j.query("MERGE (:Character {project_id: $pid, name: $name, identity: $identity})")
                         .bind(projectId).to("pid")
                         .bind(chName).to("name")
+                        .bind(identity != null ? identity : "{}").to("identity")
                         .run();
                 neoNodes++;
             }
@@ -871,12 +870,14 @@ public class ProjectService {
             for (Map<String, Object> im : itemListData) {
                 String itemName = (String) im.get("name");
                 if (itemName == null) continue;
+                String itemIdentity = safeToJsonString(im.get("identity"));
                 neo4j.query("""
-                                MERGE (it:Item {project_id: $pid, name: $name})
+                                MERGE (it:Item {project_id: $pid, name: $name, identity: $identity})
                                 SET it.itemType = $type, it.significance = $sig
                                 """)
                         .bind(projectId).to("pid")
                         .bind(itemName).to("name")
+                        .bind(itemIdentity != null ? itemIdentity : "{}").to("identity")
                         .bind(im.getOrDefault("item_type", "")).to("type")
                         .bind(im.getOrDefault("significance", "")).to("sig")
                         .run();
@@ -885,24 +886,26 @@ public class ProjectService {
                 String holder = (String) im.get("current_holder");
                 if (holder != null && !holder.isBlank()) {
                     neo4j.query("""
-                                    MATCH (it:Item {project_id: $pid, name: $iname})
+                                    MATCH (it:Item {project_id: $pid, name: $iname, identity: $identity})
                                     MERGE (c:Character {project_id: $pid, name: $holder})
                                     MERGE (c)-[:OWNS]->(it)
                                     """)
                             .bind(projectId).to("pid")
                             .bind(itemName).to("iname")
+                            .bind(itemIdentity != null ? itemIdentity : "{}").to("identity")
                             .bind(holder).to("holder")
                             .run();
                 }
                 String locStr = (String) im.get("current_location");
                 if (locStr != null && !locStr.isBlank()) {
                     neo4j.query("""
-                                    MATCH (it:Item {project_id: $pid, name: $iname})
+                                    MATCH (it:Item {project_id: $pid, name: $iname, identity: $identity})
                                     MERGE (loc:Location {project_id: $pid, name: $locStr})
                                     MERGE (loc)-[:CONTAINS]->(it)
                                     """)
                             .bind(projectId).to("pid")
                             .bind(itemName).to("iname")
+                            .bind(itemIdentity != null ? itemIdentity : "{}").to("identity")
                             .bind(locStr).to("locStr")
                             .run();
                 }
@@ -912,12 +915,14 @@ public class ProjectService {
             for (Map<String, Object> l : locs) {
                 String locName = (String) l.get("name");
                 if (locName == null) continue;
+                String locIdentity = safeToJsonString(l.get("identity"));
                 neo4j.query("""
-                                MERGE (loc:Location {project_id: $pid, name: $name})
+                                MERGE (loc:Location {project_id: $pid, name: $name, identity: $identity})
                                 SET loc.locationType = $type, loc.region = $region
                                 """)
                         .bind(projectId).to("pid")
                         .bind(locName).to("name")
+                        .bind(locIdentity != null ? locIdentity : "{}").to("identity")
                         .bind(l.getOrDefault("location_type", "")).to("type")
                         .bind(l.getOrDefault("region", "")).to("region")
                         .run();

@@ -56,7 +56,10 @@ mcp__novel-mcp-server__project_init
   meta: { "protagonist": "{主角}", "pov": "{视角}", "description": "{描述}", "language": "{lang}" }
 ```
 
-记下返回的 projectId。
+记下返回的 `projectId`。🔴 **此 UUID 是后续所有 MCP 操作的关键凭证，必须在下面两步中持久化：**
+
+- 写入 `project.yaml` 的 `mcp_project_id` 字段（见下面第 2 条）
+- 替换 `CLAUD.md` 中所有 `{项目ID}` 占位符为实际 UUID（见下面第 1 条）
 
 ## 步骤三：生成项目文件
 
@@ -64,9 +67,9 @@ mcp__novel-mcp-server__project_init
 **🔴 生成每个文件前，必须先用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/xxx.md`。**
 
 1. 用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/project.ai.md` → 按格式生成 `CLAUD.md`（Claude 自动读取作为项目规则）——
-   **全文用 `{lang}` 语言**
+   **全文用 `{lang}` 语言**；🔴 **模板中的 `{项目ID}` 必须全部替换为步骤二返回的实际 UUID**
 2. 用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/project-meta.yaml` → 按格式生成 `project.yaml`——`name` 用
-   `{lang}` 语言，`language` 字段填入 `{lang}`
+   `{lang}` 语言，`language` 字段填入 `{lang}`，🔴 **`mcp_project_id` 填入步骤二返回的实际 UUID**
 3. 用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/tone.md` → 复制到 `style/tone.md`（用 `{lang}` 填写角色声线）
 4. 用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/prompts.md` → 复制到 `style/prompts.md`（用 `{lang}` 填写提示文本）
 5. 用 `read_file` 读取 `{WEAVER_HOME}/agents/templates/review.md` → 复制到 `style/review.md`（用 `{lang}` 填写审查标准）
@@ -102,6 +105,7 @@ mcp__novel-mcp-server__project_init
 ```yaml
 name: "{项目名}"
 language: "{lang}"
+mcp_project_id: "{步骤二返回的 UUID}"
 protagonist: "{主角}"
 pov: "{视角}"
 writing_constraints:

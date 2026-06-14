@@ -51,10 +51,50 @@ public class CharacterService {
         this.neo4j = neo4j;
     }
 
+    // ── helper: serialize identity map → JSON string ──
+    private String identityToString(Map<String, Object> identity) {
+        if (identity == null || identity.isEmpty()) return "{}";
+        try {
+            return mapper.writeValueAsString(identity);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    // ── helper: create a new CharacterProfile with defaults ──
+    private CharacterProfile newProfile(Project proj, String name, String identity) {
+        CharacterProfile c = new CharacterProfile();
+        c.setProject(proj);
+        c.setName(name);
+        c.setIdentity(identity != null ? identity : "{}");
+        c.setCreatedAt(Instant.now());
+        return c;
+    }
+
+    // ── helper: resolve single profile by name + optional identity ──
+    private CharacterProfile resolveProfile(Project proj, String name, Map<String, Object> identity, boolean forWrite) {
+        String idJson = identityToString(identity);
+        if (!idJson.equals("{}")) {
+            return profiles.findByProjectAndNameAndIdentity(proj, name, idJson)
+                    .orElse(null);
+        }
+        // No identity → find by name only
+        List<CharacterProfile> matches = profiles.findByProjectAndName(proj, name);
+        if (matches.isEmpty()) return null;
+        if (matches.size() == 1) return matches.get(0);
+        // Multiple matches without identity — ambiguous
+        List<String> ids = matches.stream()
+                .map(c -> "  - " + c.getName() + " [" + (c.getIdentity() != null ? c.getIdentity() : "{}") + "]")
+                .toList();
+        throw new IllegalArgumentException(
+                "Multiple characters named '" + name + "' found. Please specify identity to disambiguate:\n"
+                        + String.join("\n", ids));
+    }
+
     /*
      * 保存画像 / 保存 / Save
      *
-     * CN 创建/更新人物画像，含声线约束
+     * CN 创建/更新人物画像，含声线约束。identity 用于区分同名角色。
      * JP キャラクタープロフィールを作成/更新、声色制約を含む
      * EN Create/update character profile with voice constraints
      */
@@ -66,19 +106,41 @@ public class CharacterService {
             @McpToolParam(description = "简介", required = false) String bio,
             @McpToolParam(description = "性格特征", required = false) List<String> traits,
             @McpToolParam(description = "声线种子台词", required = false) List<String> voiceSeeds,
-            @McpToolParam(description = "声线硬约束 JSON", required = false) Map<String, Object> voiceMeta) {
+            @McpToolParam(description = "声线硬约束 JSON", required = false) Map<String, Object> voiceMeta,
+            @McpToolParam(description = "身份标识 JSON（区分同名角色，如 {\"generation\":1}）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        CharacterProfile cp = profiles.findByProjectAndName(proj, name)
-                .orElseGet(() -> {
-                    CharacterProfile c = new CharacterProfile();
-                    c.setProject(proj);
-                    c.setName(name);
-                    c.setCreatedAt(Instant.now());
-                    return c;
-                });
+        String idJson = identityToString(identity);
+        CharacterProfile cp;
+
+        if (!idJson.equals("{}")) {
+            // With identity: find exact match or create new
+            cp = profiles.findByProjectAndNameAndIdentity(proj, name, idJson)
+                    .orElseGet(() -> {
+                        CharacterProfile c = new CharacterProfile();
+                        c.setProject(proj);
+                        c.setName(name);
+                        c.setIdentity(idJson);
+                        c.setCreatedAt(Instant.now());
+                        return c;
+                    });
+        } else {
+            // Without identity (legacy): find by name, upsert if unique
+            List<CharacterProfile> matches = profiles.findByProjectAndName(proj, name);
+            if (matches.size() > 1) {
+                List<String> ids = matches.stream()
+                        .map(c -> "  - identity: " + (c.getIdentity() != null ? c.getIdentity() : "{}"))
+                        .toList();
+                throw new IllegalArgumentException(
+                        "Multiple characters named '" + name + "' exist. Please specify identity to disambiguate:\n"
+                                + String.join("\n", ids));
+            }
+            cp = matches.isEmpty()
+                    ? newProfile(proj, name, "{}")
+                    : matches.get(0);
+        }
 
         if (bio != null) cp.setBio(bio);
         if (traits != null) {
@@ -105,41 +167,62 @@ public class CharacterService {
     /*
      * 查询状态 / 照会 / Status
      *
-     * CN 查询角色当前状态 + 历史快照
+     * CN 查询角色当前状态 + 历史快照。同名时传 identity 精确匹配；不传 identity 返回全部匹配。
      * JP キャラクターの現在状態 + 履歴スナップショット
      * EN Query character current status + history
      */
     @McpTool(name = "character_status", description = "获取角色当前状态 + 历史快照 | CN 查询角色状态 / JP キャラクター状態照会 / EN Query character status")
     public CharacterStatusResult status(
             @McpToolParam(description = "项目ID", required = true) String projectId,
-            @McpToolParam(description = "角色名", required = true) String name) {
+            @McpToolParam(description = "角色名", required = true) String name,
+            @McpToolParam(description = "身份标识 JSON（区分同名角色，不传则返回全部匹配）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        CharacterProfile cp = profiles.findByProjectAndName(proj, name).orElse(null);
-        if (cp == null) {
-            return new CharacterStatusResult("not_found", name, null, List.of());
+        String idJson = identityToString(identity);
+        List<CharacterProfile> matches;
+
+        if (!idJson.equals("{}")) {
+            CharacterProfile cp = profiles.findByProjectAndNameAndIdentity(proj, name, idJson).orElse(null);
+            matches = cp != null ? List.of(cp) : List.of();
+        } else {
+            matches = profiles.findByProjectAndName(proj, name);
         }
 
-        // 目标查询——只查该角色
-        List<CharacterSnapshot> snaps = snapshots.findByProjectAndCharacterNameIn(proj, List.of(name));
-        List<SnapshotInfo> history = snaps.stream()
-                .map(s -> new SnapshotInfo(
-                        s.getChapter().getChapterNumber(),
-                        s.getPhysicalLocation(),
-                        s.getPhysicalStatus(),
-                        s.getCorePsychology(),
-                        s.getKeyItems() != null ? Arrays.asList(s.getKeyItems()) : List.of(),
-                        s.getSummary()))
-                .toList();
+        if (matches.isEmpty()) {
+            return new CharacterStatusResult("not_found", name, null, List.of(), List.of());
+        }
 
-        ProfileInfo profile = new ProfileInfo(
-                cp.getId().toString(), name, cp.getBio(), cp.getVoice(),
-                cp.getVoiceSeeds() != null ? Arrays.asList(cp.getVoiceSeeds()) : List.of(),
-                cp.getType());
+        // Build profile list
+        List<ProfileInfo> profileList = new ArrayList<>();
+        List<SnapshotInfo> history = new ArrayList<>();
 
-        return new CharacterStatusResult("ok", name, profile, history);
+        for (CharacterProfile cp : matches) {
+            ProfileInfo pi = new ProfileInfo(
+                    cp.getId().toString(), name, cp.getBio(), cp.getVoice(),
+                    cp.getVoiceSeeds() != null ? Arrays.asList(cp.getVoiceSeeds()) : List.of(),
+                    cp.getType(),
+                    cp.getIdentity() != null ? cp.getIdentity() : "{}");
+            profileList.add(pi);
+
+            List<CharacterSnapshot> snaps = snapshots.findByProjectAndCharacterNameIn(proj, List.of(name));
+            for (CharacterSnapshot s : snaps) {
+                if (s.getCharacter().getId().equals(cp.getId())) {
+                    history.add(new SnapshotInfo(
+                            s.getChapter().getChapterNumber(),
+                            s.getPhysicalLocation(),
+                            s.getPhysicalStatus(),
+                            s.getCorePsychology(),
+                            s.getKeyItems() != null ? Arrays.asList(s.getKeyItems()) : List.of(),
+                            s.getSummary()));
+                }
+            }
+        }
+
+        String status = matches.size() > 1 && identity == null ? "multiple" : "ok";
+        return new CharacterStatusResult(status, name, profileList.get(0), history,
+                matches.size() > 1 ? profileList : List.of());
     }
 
     // ── serialization ──
@@ -161,12 +244,16 @@ public class CharacterService {
             @McpToolParam(description = "生理状态", required = false) String physical,
             @McpToolParam(description = "心理状态", required = false) String psychology,
             @McpToolParam(description = "关键物品", required = false) List<String> items,
-            @McpToolParam(description = "状态摘要", required = false) String summary) {
+            @McpToolParam(description = "状态摘要", required = false) String summary,
+            @McpToolParam(description = "身份标识 JSON（区分同名角色）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
-        CharacterProfile cp = profiles.findByProjectAndName(proj, name)
-                .orElseThrow(() -> new IllegalArgumentException("Character not found: " + name));
+        CharacterProfile cp = resolveProfile(proj, name, identity, false);
+        if (cp == null) {
+            String hint = identity != null ? " with identity " + identityToString(identity) : "";
+            throw new IllegalArgumentException("Character not found: " + name + hint);
+        }
         Chapter chapter = chapters.findByProjectAndChapterNumber(proj, chapterNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Chapter not found: " + chapterNumber));
 
@@ -192,13 +279,15 @@ public class CharacterService {
         // Neo4j: record character visited location
         if (location != null && !location.isBlank()) {
             try {
+                String idJson = cp.getIdentity() != null ? cp.getIdentity() : "{}";
                 neo4j.query("""
-                                MERGE (c:Character {project_id: $pid, name: $charName})
+                                MERGE (c:Character {project_id: $pid, name: $charName, identity: $identity})
                                 MERGE (loc:Location {project_id: $pid, name: $locName})
                                 MERGE (c)-[:VISITED]->(loc)
                                 """)
                         .bind(projectId).to("pid")
                         .bind(name).to("charName")
+                        .bind(idJson).to("identity")
                         .bind(location).to("locName")
                         .run();
             } catch (Exception e) {
@@ -278,11 +367,12 @@ public class CharacterService {
     }
 
     public record CharacterStatusResult(String status, String name, ProfileInfo profile,
-                                        List<SnapshotInfo> history) {
+                                        List<SnapshotInfo> history,
+                                        List<ProfileInfo> allProfiles) {
     }
 
     public record ProfileInfo(String id, String name, String bio, String voice,
-                              List<String> voiceSeeds, String type) {
+                              List<String> voiceSeeds, String type, String identity) {
     }
 
     public record SnapshotInfo(int chapterNumber, String location, String physical,

@@ -7,6 +7,24 @@ runAs: inline
 # MCP 工具调用参考
 
 > 当前版本：45 个 MCP 工具，覆盖项目管理、章节、人物、物品、地点、宇宙、时间线、正典、搜索、图谱、推演。
+> 🔴 **projectId 来源**：所有工具中的 `<项目ID>` 从项目根目录 `project.yaml` 的 `mcp_project_id` 字段读取。初始化时由
+`project_init` 返回后自动写入。
+>
+> 🔴 **同名实体区分（identity）**：`character_save`、`item_register`、`location_register` 等工具支持可选的 `identity` JSON
+> 参数。用于区分同一项目内的同名实体（如尼尔的双子姐妹、平行世界同一地点）。
+>
+> ```reasonix
+> # 例：注册第二组 Devola
+> mcp__novel-mcp-server__character_save
+>   projectId: "<项目ID>"
+>   name: "Devola"
+>   identity: {"generation": 2, "assigned_to": "海岸镇"}
+> ```
+>
+> - 不传 `identity`：同名且唯一时正常工作；同名多条时返回 `allProfiles` 列表
+> - 传 `identity`：精确匹配，创建/更新/查询指定变体
+> - `identity` 内容由项目自行定义，不同项目可用不同字段（如`{"generation":1}`、`{"era":"黄金时代"}`、
+    `{"clone_id":"CT-7567"}`）
 
 ## 项目
 
@@ -54,6 +72,7 @@ mcp__novel-mcp-server__chapter_list
 mcp__novel-mcp-server__character_save
   projectId: "<项目ID>"
   name: "角色名"
+  identity: {"generation":1}   // 可选——区分同名角色（JSON，如尼尔双子）
   bio: "简介"
   traits: ["冷静","果断"]
   voiceSeeds: ["标志性台词1","台词2"]
@@ -62,13 +81,15 @@ mcp__novel-mcp-server__character_save
 mcp__novel-mcp-server__character_status
   projectId: "<项目ID>"
   name: "角色名"
-  // 返回：当前状态 + 全部历史快照
+  identity: {"generation":1}   // 可选——精确匹配；不传且同名多条时返回 allProfiles 列表
+  // 返回：当前状态 + 全部历史快照 + 同名列表（如有）
 
 mcp__novel-mcp-server__character_snapshot
   projectId: "<项目ID>"
   name: "角色名"
   chapterNumber: 1
   location: "地点"           // 可选——自动建 Neo4j [:VISITED] 边
+  identity: {"generation":1}   // 可选——区分同名角色
   physical: "受伤"
   psychology: "愤怒"
   items: ["圣剑"]            // 可选
@@ -86,6 +107,7 @@ mcp__novel-mcp-server__character_snapshot_check
 mcp__novel-mcp-server__item_register
   projectId: "<项目ID>"
   name: "圣剑Excalibur"
+  identity: {"era":"黄金时代"}   // 可选——区分同名物品
   itemType: "武器"
   description: "发光的圣剑"
   origin: "湖中仙女所赠"
@@ -97,6 +119,7 @@ mcp__novel-mcp-server__item_register
 mcp__novel-mcp-server__item_update
   projectId: "<项目ID>"
   name: "圣剑Excalibur"
+  identity: {"era":"黄金时代"}   // 可选——区分同名物品
   chapter: 5
   event: "遗失"              // 赠予/遗失/发现/销毁
   newHolder: "莫德雷德"       // 可选
@@ -107,6 +130,7 @@ mcp__novel-mcp-server__item_update
 mcp__novel-mcp-server__item_query
   projectId: "<项目ID>"
   name: "圣剑Excalibur"
+  identity: {"era":"黄金时代"}   // 可选——不传且同名多条时返回 allProfiles
   // 返回：基本信息 + 归属变更历史 + Neo4j 关联图谱
 ```
 
@@ -116,6 +140,7 @@ mcp__novel-mcp-server__item_query
 mcp__novel-mcp-server__location_register
   projectId: "<项目ID>"
   name: "卡美洛"
+  identity: {"era":"黄金时代"}   // 可选——区分同名地点
   locationType: "建筑"          // 自然场景/建筑/聚落/室内
   region: "不列颠"
   firstChapter: 1
@@ -127,6 +152,7 @@ mcp__novel-mcp-server__location_register
 mcp__novel-mcp-server__location_update
   projectId: "<项目ID>"
   name: "卡美洛"
+  identity: {"era":"黄金时代"}   // 可选——区分同名地点
   chapter: 5
   triggerEvent: "战争"
   change: "城墙被毁"
@@ -136,6 +162,7 @@ mcp__novel-mcp-server__location_update
 mcp__novel-mcp-server__location_status
   projectId: "<项目ID>"
   name: "卡美洛"
+  identity: {"era":"黄金时代"}   // 可选——不传且同名多条时返回 allProfiles
   // 返回：初始信息 + 全部变更记录 + 当前状态
 ```
 

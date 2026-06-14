@@ -68,7 +68,10 @@ mcp__novel-mcp-server__project_init
   meta: { "protagonist": "{主角}", "pov": "{视角}", "description": "{描述}", "language": "{lang}" }
 ```
 
-记录返回的 `projectId`。
+记录返回的 `projectId`。🔴 **此 UUID 是后续所有 MCP 操作的关键凭证，必须在下面两步中持久化：**
+
+- 写入 `project.yaml` 的 `mcp_project_id` 字段（见第四步 4.1）
+- 替换 `CLAUD.md` 中所有 `{项目ID}` 占位符（见第三步）
 
 ## 第三步：生成项目规则文件
 
@@ -76,6 +79,7 @@ mcp__novel-mcp-server__project_init
 （Reasonix 会在 session 加载时读取它作为项目规则）。
 
 **🔴 关键规则**：`CLAUD.md` 的全部内容（标题、说明文字、约束描述）一律用 `{lang}` 语言撰写。
+**🔴 必须替换占位符**：模板中的 `{项目ID}` 必须全部替换为第二步返回的实际 UUID。
 
 如果找不到模板，直接按以下结构生成（内容用 `{lang}` 语言）：
 
@@ -103,6 +107,8 @@ mcp__novel-mcp-server__project_init
 
 - `name` — 用 `{lang}` 语言的项目名称
 - `language` — 填入 `{lang}`（如 `zh-CN`、`ja`、`en`）
+- 🔴 **`mcp_project_id` — 填入第二步 `project_init` 返回的实际 UUID**（这是关键字段，后续所有 MCP 工具调用都从这里读取
+  projectId）
 - 所有注释、字段值用 `{lang}` 语言填写
 
 ### 4.2 创建目录和文件
@@ -110,19 +116,19 @@ mcp__novel-mcp-server__project_init
 **🔴 所有生成文件的标题、说明、占位文本一律使用 `{lang}` 语言。**
 **生成每个文件前，先用 `read_file` 读取对应模板，再按模板格式生成。**
 
-| 目录/文件                | 模板（读取 `{WEAVER_HOME}/` 下的路径）                        | 说明                              |
-|----------------------|-----------------------------------------------------|---------------------------------|
-| `CLAUD.md`           | `read_file agents/templates/project.ai.md` → 填充     | 项目规则（`{lang}` 语言）               |
-| `project.yaml`       | `read_file agents/templates/project-meta.yaml` → 填充 | 项目元数据（`{lang}` 语言）              |
-| `ollama-config.yaml` | 从 `{WEAVER_HOME}/ollama-config.example.yaml` 复制     | Ollama 模型配置（按需修改模型名）            |
-| `style/tone.md`      | `read_file agents/templates/tone.md` → 复制并填写        | 文风设定（用 `{lang}` 填写）             |
-| `style/prompts.md`   | `read_file agents/templates/prompts.md` → 复制并填写     | 推演模板（用 `{lang}` 填写）             |
-| `style/review.md`    | `read_file agents/templates/review.md` → 复制并填写      | 审查模板（用 `{lang}` 填写）             |
-| `locations/`         | `read_file agents/templates/location.md`            | 地点档案（每地点一个 `.md`，用 `{lang}` 填写） |
-| `items/`             | `read_file agents/templates/item.md`                | 物品档案（每物品一个 `.md`，用 `{lang}` 填写） |
-| `characters/`        | `read_file agents/templates/character-profile.md`   | 人物目录（每人一个 `.md`，用 `{lang}` 填写）  |
-| `outlines/`          | `read_file agents/templates/chapter-outline.md`     | 大纲目录（用 `{lang}` 填写）             |
-| `chapters/`          | `read_file agents/templates/chapter-draft.md`       | 章节目录（用 `{lang}` 填写）             |
+| 目录/文件                | 模板（读取 `{WEAVER_HOME}/` 下的路径）                                                | 说明                              |
+|----------------------|-----------------------------------------------------------------------------|---------------------------------|
+| `CLAUD.md`           | `read_file agents/templates/project.ai.md` → 填充 + 🔴 替换所有 `{项目ID}` 为实际 UUID | 项目规则（`{lang}` 语言）               |
+| `project.yaml`       | `read_file agents/templates/project-meta.yaml` → 填充                         | 项目元数据（`{lang}` 语言）              |
+| `ollama-config.yaml` | 从 `{WEAVER_HOME}/ollama-config.example.yaml` 复制                             | Ollama 模型配置（按需修改模型名）            |
+| `style/tone.md`      | `read_file agents/templates/tone.md` → 复制并填写                                | 文风设定（用 `{lang}` 填写）             |
+| `style/prompts.md`   | `read_file agents/templates/prompts.md` → 复制并填写                             | 推演模板（用 `{lang}` 填写）             |
+| `style/review.md`    | `read_file agents/templates/review.md` → 复制并填写                              | 审查模板（用 `{lang}` 填写）             |
+| `locations/`         | `read_file agents/templates/location.md`                                    | 地点档案（每地点一个 `.md`，用 `{lang}` 填写） |
+| `items/`             | `read_file agents/templates/item.md`                                        | 物品档案（每物品一个 `.md`，用 `{lang}` 填写） |
+| `characters/`        | `read_file agents/templates/character-profile.md`                           | 人物目录（每人一个 `.md`，用 `{lang}` 填写）  |
+| `outlines/`          | `read_file agents/templates/chapter-outline.md`                             | 大纲目录（用 `{lang}` 填写）             |
+| `chapters/`          | `read_file agents/templates/chapter-draft.md`                               | 章节目录（用 `{lang}` 填写）             |
 
 **章节标题格式按 `{lang}` 调整：**
 

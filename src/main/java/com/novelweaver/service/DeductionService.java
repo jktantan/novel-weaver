@@ -79,8 +79,14 @@ public class DeductionService {
 
         List<CharContext> chars = new ArrayList<>();
         for (String name : charNames) {
-            CharacterProfile cp = cps.stream().filter(p -> p.getName().equals(name)).findFirst().orElse(null);
-            chars.add(buildProfile(name, cp, allSnaps, relMap.getOrDefault(name, List.of())));
+            List<CharacterProfile> nameMatches = cps.stream().filter(p -> p.getName().equals(name)).toList();
+            if (nameMatches.isEmpty()) {
+                chars.add(buildProfile(name, null, allSnaps, relMap.getOrDefault(name, List.of())));
+            } else {
+                for (CharacterProfile cp : nameMatches) {
+                    chars.add(buildProfile(name, cp, allSnaps, relMap.getOrDefault(name, List.of())));
+                }
+            }
         }
 
         List<Foreshadowing> activeFores = foreshadows.findActiveByProject(proj);
@@ -126,8 +132,14 @@ public class DeductionService {
             List<CharacterProfile> cps = profiles.findByProjectAndNameIn(proj, characters);
             List<CharacterSnapshot> allSnaps = snapshots.findByProjectAndCharacterNameIn(proj, characters);
             for (String name : characters) {
-                CharacterProfile cp = cps.stream().filter(p -> p.getName().equals(name)).findFirst().orElse(null);
-                chars.add(buildProfile(name, cp, allSnaps, rels.findByProjectAndFromChar(proj, name)));
+                List<CharacterProfile> nameMatches = cps.stream().filter(p -> p.getName().equals(name)).toList();
+                if (nameMatches.isEmpty()) {
+                    chars.add(buildProfile(name, null, allSnaps, rels.findByProjectAndFromChar(proj, name)));
+                } else {
+                    for (CharacterProfile cp : nameMatches) {
+                        chars.add(buildProfile(name, cp, allSnaps, rels.findByProjectAndFromChar(proj, name)));
+                    }
+                }
             }
         }
 
@@ -197,7 +209,7 @@ public class DeductionService {
                                      List<CharacterSnapshot> allSnaps,
                                      List<CharacterRelationship> outbound) {
         if (cp == null) {
-            return new CharContext(name, null, null, null, null);
+            return new CharContext(name, null, null, null, null, "{}");
         }
 
         SnapshotInfo latest = allSnaps.stream()
@@ -222,7 +234,8 @@ public class DeductionService {
                     cp.getVoiceMeta());
         }
 
-        return new CharContext(name, cp.getBio(), voice, relations, latest);
+        return new CharContext(name, cp.getBio(), voice, relations, latest,
+                cp.getIdentity() != null ? cp.getIdentity() : "{}");
     }
 
     private void saveLogSafely(Project proj, Chapter chapter, String type, String model, String context) {
@@ -284,7 +297,7 @@ public class DeductionService {
     }
 
     public record CharContext(String name, String bio, VoiceInfo voice, List<RelInfo> relations,
-                              SnapshotInfo latestStatus) {
+                              SnapshotInfo latestStatus, String identity) {
     }
 
     public record VoiceInfo(String description, List<String> seedLines, String voiceMeta) {

@@ -11,7 +11,15 @@ import java.util.UUID;
 
 @Repository
 public interface LocationRepository extends JpaRepository<Location, UUID> {
-    Optional<Location> findByProjectAndName(Project project, String name);
+    /**
+     * Find all locations by project and name (may return multiple if identity differs).
+     */
+    List<Location> findByProjectAndName(Project project, String name);
+
+    /**
+     * Exact match by project, name, and identity JSON string.
+     */
+    Optional<Location> findByProjectAndNameAndIdentity(Project project, String name, String identity);
 
     List<Location> findAllByProject(Project project);
 }

@@ -8,24 +8,26 @@ runAs: inline
 
 当用户说"写大纲""写第N章""写正文"或类似意思时，按对应流程执行。
 
-## 前置步骤：读 Ollama 配置
+## 前置步骤：读配置文件
 
-🔴 在任何流程开始之前，先读取 Ollama 配置：
+🔴 在任何流程开始之前，先读取配置文件：
 
 ```
+read_file project.yaml          ← 🔴 获取 mcp_project_id（后续所有 MCP 调用需要）
 read_file ollama-config.yaml
 ```
 
 从配置中提取以下变量（文件不存在则用默认值）：
 
-| 变量                  | 配置字段              | 默认值         |
-|---------------------|-------------------|-------------|
-| `{embedding_model}` | `embedding_model` | `bge-m3`    |
-| `{summary_model}`   | `summary_model`   | （空，用 AI 提取） |
-| `{ollama_host}`     | `ollama_host`     | `localhost` |
-| `{ollama_port}`     | `ollama_port`     | `11434`     |
+| 变量                  | 配置字段              | 来源                   | 默认值         |
+|---------------------|-------------------|----------------------|-------------|
+| `{projectId}`       | `mcp_project_id`  | `project.yaml`       | （无，必须存在）    |
+| `{embedding_model}` | `embedding_model` | `ollama-config.yaml` | `bge-m3`    |
+| `{summary_model}`   | `summary_model`   | `ollama-config.yaml` | （空，用 AI 提取） |
+| `{ollama_host}`     | `ollama_host`     | `ollama-config.yaml` | `localhost` |
+| `{ollama_port}`     | `ollama_port`     | `ollama-config.yaml` | `11434`     |
 
-后续步骤中所有 `{embedding_model}`、`{summary_model}`、`{ollama_host}`、`{ollama_port}` 都从配置取值。
+后续步骤中所有 `{projectId}`、`{embedding_model}`、`{summary_model}`、`{ollama_host}`、`{ollama_port}` 都从配置取值。
 
 ## 流程 A：写大纲
 
@@ -145,6 +147,7 @@ mcp__novel-mcp-server__rag_search
 mcp__novel-mcp-server__character_status
   projectId: "{项目ID}"
   name: "{主角}"
+  # identity: {"generation": 1}  ← 同名角色时必传
 
 mcp__novel-mcp-server__character_status
   projectId: "{项目ID}"
@@ -349,14 +352,15 @@ write_file foreshadowing.yaml
 
 ## 关键原则
 
-| 原则            | 说明                                     |
-|---------------|----------------------------------------|
-| **大纲优先**      | 大纲有明确规定的，以大纲为准，不可偏离                    |
-| **先查后写**      | rag_search + character_status 必须先调     |
-| **写完即审**      | 审核不是可选的，是步骤的一部分                        |
-| **一次性入库**     | 不要写一段同步一段，整章写完再一次性调用所有 MCP 工具          |
-| **本地+DB双写**   | 本地文件（chapters/、states/）和 MCP 数据库必须同步更新 |
-| **{lang} 语言** | 所有生成内容用项目初始化时选择的写作语言                   |
+| 原则            | 说明                                                                                       |
+|---------------|------------------------------------------------------------------------------------------|
+| **大纲优先**      | 大纲有明确规定的，以大纲为准，不可偏离                                                                      |
+| **先查后写**      | rag_search + character_status 必须先调                                                       |
+| **写完即审**      | 审核不是可选的，是步骤的一部分                                                                          |
+| **一次性入库**     | 不要写一段同步一段，整章写完再一次性调用所有 MCP 工具                                                            |
+| **本地+DB双写**   | 本地文件（chapters/、states/）和 MCP 数据库必须同步更新                                                   |
+| **同名角色**      | 如项目有同名实体（如尼尔双子），`character_save`/`character_status`/`item_query` 等传 `identity` JSON 精确匹配 |
+| **{lang} 语言** | 所有生成内容用项目初始化时选择的写作语言                                                                     |
 
 ---
 

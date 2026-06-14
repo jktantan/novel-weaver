@@ -2,6 +2,7 @@
 
 > 类型：{original / fanfic} | 主角：{主角名} | 叙事视角：{POV}
 > 体裁：{网文风格 / 传统文学 / ...}
+> 🔴 **MCP 项目ID**：`{项目ID}` ← 初始化时自动替换为实际 UUID；若仍为占位符，请从 `project.yaml` 的 `mcp_project_id` 读取
 
 ---
 
@@ -15,6 +16,7 @@
 🔴 outlines/ch{NNNN}-{标题}.md         ← 【最优先】章节大纲是权威来源
 🔴 characters/{主角名}.md              ← 主角设定
 🔴 characters/{重要角色}.md            ← 本章涉及的关键角色
+🔴 project.yaml                        ← 🔴 读取 mcp_project_id（后续所有 MCP 调用需要）
 style/tone.md                          ← 文风设定（声线规范、禁止事项）
 style/prompts.md                       ← 推演模板（卡文时使用）
 canon/timeline.md（同人小说）          ← 确认正典时间线位置
@@ -141,6 +143,9 @@ mcp__novel-mcp-server__deduce_behavior
 ---
 
 ## 五、可用 MCP 工具
+
+> 🔴 **projectId 来源**：所有 MCP 工具调用中的 `projectId` 从 `project.yaml` 的 `mcp_project_id` 字段读取。
+> 如果 CLI 中看到 `{项目ID}` 占位符，说明初始化时未正确替换——手动从 `project.yaml` 复制 `mcp_project_id` 的值。
 
 > 🔴 **Embedding 关键规则**：`rag_search`、`semantic_search`、`chapter_sync` 的向量由**写作机本地 Ollama** 生成。
 > 模型名称和地址在项目根目录的 `ollama-config.yaml` 中配置（与 `project.yaml` 同级，默认 `embedding_model: bge-m3`，

@@ -175,11 +175,11 @@ CREATE TABLE character_profiles
     voice_meta         JSONB            DEFAULT '{}',
     status             JSONB            DEFAULT '{}',
     basic_info         JSONB            DEFAULT '{}',
+    identity   JSONB       DEFAULT '{}',
     personality_traits TEXT[] DEFAULT '{}',
     embedding          vector(1024),
     created_at         TIMESTAMPTZ      DEFAULT now(),
-    updated_at         TIMESTAMPTZ      DEFAULT now(),
-    UNIQUE (project_id, name)
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 COMMENT
@@ -581,10 +581,10 @@ CREATE TABLE locations
     sensory_detail     TEXT             DEFAULT '',
     narrative_function TEXT             DEFAULT '',
     change_log         JSONB            DEFAULT '[]'::jsonb,
+    identity   JSONB       DEFAULT '{}',
     current_status     TEXT             DEFAULT '正常',
     created_at         TIMESTAMPTZ      DEFAULT now(),
-    updated_at         TIMESTAMPTZ      DEFAULT now(),
-    UNIQUE (project_id, name)
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 COMMENT
@@ -734,6 +734,7 @@ CREATE TABLE items
     origin           TEXT             DEFAULT '',
     significance     TEXT             DEFAULT '',
     properties       JSONB            DEFAULT '{}'::jsonb,
+    identity   JSONB       DEFAULT '{}',
     current_holder   TEXT             DEFAULT '',
     current_location TEXT             DEFAULT '',
     current_status   TEXT             DEFAULT '正常',
@@ -741,14 +742,15 @@ CREATE TABLE items
     owner_history    JSONB            DEFAULT '[]'::jsonb,
     embedding        vector(1024),
     created_at       TIMESTAMPTZ      DEFAULT now(),
-    updated_at       TIMESTAMPTZ      DEFAULT now(),
-    UNIQUE (project_id, name)
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 COMMENT
 ON TABLE items IS '物品档案——名称、来源、归属、用途、生命周期
 JP アイテムアーカイブ——名称、来歴、所有者、用途、ライフサイクル
 EN Item archive — name, origin, ownership, usage, lifecycle';
+COMMENT
+ON COLUMN items.identity IS '身份标识 JSON（区分同名物品，如 {"era":"黄金时代"}/{"era":"末日"}）';
 COMMENT
 ON COLUMN items.item_type IS '武器/信物/神器/日常物品/其他
 JP 武器/形見/神器/日常品/その他

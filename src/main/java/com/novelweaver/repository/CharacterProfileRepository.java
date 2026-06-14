@@ -11,7 +11,15 @@ import java.util.UUID;
 
 @Repository
 public interface CharacterProfileRepository extends JpaRepository<CharacterProfile, UUID> {
-    Optional<CharacterProfile> findByProjectAndName(Project project, String name);
+    /**
+     * Find all profiles by project and name (may return multiple if identity differs).
+     */
+    List<CharacterProfile> findByProjectAndName(Project project, String name);
+
+    /**
+     * Exact match by project, name, and identity JSON string.
+     */
+    Optional<CharacterProfile> findByProjectAndNameAndIdentity(Project project, String name, String identity);
 
     List<CharacterProfile> findAllByProject(Project project);
 

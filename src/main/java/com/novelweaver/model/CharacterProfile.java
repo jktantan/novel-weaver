@@ -22,7 +22,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "character_profiles", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"project_id", "name"})
 }, indexes = {
         @Index(name = "idx_profiles_project", columnList = "project_id")
 })
@@ -73,6 +72,10 @@ public class CharacterProfile {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String basicInfo;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String identity;
     @Column(columnDefinition = "text[]")
     private String[] personalityTraits;
 

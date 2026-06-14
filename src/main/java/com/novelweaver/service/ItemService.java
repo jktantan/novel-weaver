@@ -43,6 +43,31 @@ public class ItemService {
         this.mapper = mapper;
     }
 
+    private String identityToString(Map<String, Object> identity) {
+        if (identity == null || identity.isEmpty()) return "{}";
+        try {
+            return mapper.writeValueAsString(identity);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    private Item resolveItem(Project proj, String name, Map<String, Object> identity) {
+        String idJson = identityToString(identity);
+        if (!idJson.equals("{}")) {
+            return items.findByProjectAndNameAndIdentity(proj, name, idJson).orElse(null);
+        }
+        List<Item> matches = items.findByProjectAndName(proj, name);
+        if (matches.isEmpty()) return null;
+        if (matches.size() == 1) return matches.get(0);
+        List<String> ids = matches.stream()
+                .map(i -> "  - " + i.getName() + " [" + (i.getIdentity() != null ? i.getIdentity() : "{}") + "]")
+                .toList();
+        throw new IllegalArgumentException(
+                "Multiple items named '" + name + "' found. Please specify identity to disambiguate:\n"
+                        + String.join("\n", ids));
+    }
+
 
     /*
      * 注册物品 / 登録 / Register
@@ -64,18 +89,40 @@ public class ItemService {
             @McpToolParam(description = "当前持有者", required = false) String currentHolder,
             @McpToolParam(description = "当前位置", required = false) String currentLocation,
             @McpToolParam(description = "当前状态（正常/损坏/遗失等）", required = false) String currentStatus,
-            @McpToolParam(description = "首次出现章节", required = false) Integer firstChapter) {
+            @McpToolParam(description = "首次出现章节", required = false) Integer firstChapter,
+            @McpToolParam(description = "身份标识 JSON（区分同名物品，如 {\"era\":\"黄金时代\"}）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        if (items.findByProjectAndName(proj, name).isPresent()) {
-            throw new IllegalArgumentException("Item already exists: " + name);
+        String idJson = identityToString(identity);
+
+        if (!idJson.equals("{}")) {
+            // With identity: check exact match
+            if (items.findByProjectAndNameAndIdentity(proj, name, idJson).isPresent()) {
+                throw new IllegalArgumentException("Item already exists: " + name + " with identity " + idJson);
+            }
+        } else {
+            // Without identity: legacy check by name only
+            List<Item> existing = items.findByProjectAndName(proj, name);
+            if (!existing.isEmpty()) {
+                if (existing.size() == 1 && "{}".equals(existing.get(0).getIdentity() != null ? existing.get(0).getIdentity() : "{}")) {
+                    throw new IllegalArgumentException("Item already exists: " + name);
+                }
+                // Has identity variants — ambiguous
+                List<String> ids = existing.stream()
+                        .map(i -> "  - identity: " + (i.getIdentity() != null ? i.getIdentity() : "{}"))
+                        .toList();
+                throw new IllegalArgumentException(
+                        "Multiple items named '" + name + "' exist. Please specify identity:\n"
+                                + String.join("\n", ids));
+            }
         }
 
         Item item = new Item();
         item.setProject(proj);
         item.setName(name);
+        item.setIdentity(idJson);
         item.setItemType(itemType != null ? itemType : "");
         item.setDescription(description != null ? description : "");
         item.setOrigin(origin != null ? origin : "");
@@ -94,14 +141,15 @@ public class ItemService {
         item.setUpdatedAt(Instant.now());
         items.save(item);
 
-        // Neo4j: create :Item node
+        // Neo4j: create :Item node (with identity in key)
         try {
             neo4j.query("""
-                            MERGE (it:Item {project_id: $pid, name: $name})
+                            MERGE (it:Item {project_id: $pid, name: $name, identity: $identity})
                             SET it.itemType = $type, it.significance = $sig
                             """)
                     .bind(projectId).to("pid")
                     .bind(name).to("name")
+                    .bind(idJson).to("identity")
                     .bind(item.getItemType()).to("type")
                     .bind(item.getSignificance()).to("sig")
                     .run();
@@ -109,12 +157,13 @@ public class ItemService {
             // Link to current holder if specified
             if (currentHolder != null && !currentHolder.isBlank()) {
                 neo4j.query("""
-                                MATCH (it:Item {project_id: $pid, name: $name})
+                                MATCH (it:Item {project_id: $pid, name: $name, identity: $identity})
                                 MERGE (c:Character {project_id: $pid, name: $holder})
                                 MERGE (c)-[:OWNS]->(it)
                                 """)
                         .bind(projectId).to("pid")
                         .bind(name).to("name")
+                        .bind(idJson).to("identity")
                         .bind(currentHolder).to("holder")
                         .run();
             }
@@ -122,12 +171,13 @@ public class ItemService {
             // Link to current location if specified
             if (currentLocation != null && !currentLocation.isBlank()) {
                 neo4j.query("""
-                                MATCH (it:Item {project_id: $pid, name: $name})
+                                MATCH (it:Item {project_id: $pid, name: $name, identity: $identity})
                                 MERGE (loc:Location {project_id: $pid, name: $locName})
                                 MERGE (loc)-[:CONTAINS]->(it)
                                 """)
                         .bind(projectId).to("pid")
                         .bind(name).to("name")
+                        .bind(idJson).to("identity")
                         .bind(currentLocation).to("locName")
                         .run();
             }
@@ -156,13 +206,17 @@ public class ItemService {
             @McpToolParam(description = "新持有者（无则留空）", required = false) String newHolder,
             @McpToolParam(description = "新位置（无则留空）", required = false) String newLocation,
             @McpToolParam(description = "新状态（正常/损坏/遗失/销毁等）", required = false) String newStatus,
-            @McpToolParam(description = "变更描述", required = false) String changeDescription) {
+            @McpToolParam(description = "变更描述", required = false) String changeDescription,
+            @McpToolParam(description = "身份标识 JSON（区分同名物品）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        Item item = items.findByProjectAndName(proj, name)
-                .orElseThrow(() -> new IllegalArgumentException("Item not found: " + name));
+        Item item = resolveItem(proj, name, identity);
+        if (item == null) {
+            String hint = identity != null ? " with identity " + identityToString(identity) : "";
+            throw new IllegalArgumentException("Item not found: " + name + hint);
+        }
 
         String oldHolder = item.getCurrentHolder();
 
@@ -203,28 +257,32 @@ public class ItemService {
         item.setUpdatedAt(Instant.now());
         items.save(item);
 
+        String idJson = item.getIdentity() != null ? item.getIdentity() : "{}";
+
         // Neo4j: update relationships
         try {
             if (newHolder != null && !newHolder.isBlank() && !newHolder.equals(oldHolder)) {
                 // Remove old OWNS relationships
                 if (oldHolder != null && !oldHolder.isBlank()) {
                     neo4j.query("""
-                                    MATCH (:Character {project_id: $pid, name: $old})-[r:OWNS]->(:Item {project_id: $pid, name: $name})
+                                    MATCH (:Character {project_id: $pid, name: $old})-[r:OWNS]->(:Item {project_id: $pid, name: $name, identity: $identity})
                                     DELETE r
                                     """)
                             .bind(projectId).to("pid")
                             .bind(oldHolder).to("old")
                             .bind(name).to("name")
+                            .bind(idJson).to("identity")
                             .run();
                 }
                 // Create new OWNS
                 neo4j.query("""
-                                MATCH (it:Item {project_id: $pid, name: $name})
+                                MATCH (it:Item {project_id: $pid, name: $name, identity: $identity})
                                 MERGE (c:Character {project_id: $pid, name: $holder})
                                 MERGE (c)-[:OWNS]->(it)
                                 """)
                         .bind(projectId).to("pid")
                         .bind(name).to("name")
+                        .bind(idJson).to("identity")
                         .bind(newHolder).to("holder")
                         .run();
             }
@@ -246,30 +304,29 @@ public class ItemService {
     @McpTool(name = "item_query", description = "查询物品详情——返回基本信息 + 归属变更历史 + 当前状态 | CN 查询物品 / JP アイテムを照会 / EN Query item")
     public ItemQueryResult query(
             @McpToolParam(description = "项目ID", required = true) String projectId,
-            @McpToolParam(description = "物品名", required = true) String name) {
+            @McpToolParam(description = "物品名", required = true) String name,
+            @McpToolParam(description = "身份标识 JSON（区分同名物品，不传则返回全部匹配）", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        Item item = items.findByProjectAndName(proj, name)
-                .orElseThrow(() -> new IllegalArgumentException("Item not found: " + name));
+        String idJson = identityToString(identity);
+        List<Item> matches;
 
-        Map<String, Object> profile = new LinkedHashMap<>();
-        profile.put("name", item.getName());
-        profile.put("type", item.getItemType());
-        profile.put("description", item.getDescription());
-        profile.put("origin", item.getOrigin());
-        profile.put("significance", item.getSignificance());
-        try {
-            profile.put("properties", item.getProperties() != null
-                    ? mapper.readValue(item.getProperties(), Object.class) : Map.of());
-        } catch (Exception e) {
-            profile.put("properties", item.getProperties());
+        if (!idJson.equals("{}")) {
+            Item it = items.findByProjectAndNameAndIdentity(proj, name, idJson).orElse(null);
+            matches = it != null ? List.of(it) : List.of();
+        } else {
+            matches = items.findByProjectAndName(proj, name);
         }
-        profile.put("current_holder", item.getCurrentHolder());
-        profile.put("current_location", item.getCurrentLocation());
-        profile.put("current_status", item.getCurrentStatus());
-        profile.put("first_chapter", item.getFirstChapter());
+
+        if (matches.isEmpty()) {
+            return new ItemQueryResult("not_found", name, null, Map.of(), List.of(), List.of(), List.of());
+        }
+
+        // Build result from first match; include allProfiles if multiple
+        Item item = matches.get(0);
+        Map<String, Object> profile = buildItemProfile(item);
 
         List<Map<String, Object>> history = new ArrayList<>();
         String historyJson = item.getOwnerHistory();
@@ -286,12 +343,13 @@ public class ItemService {
         List<Map<String, Object>> relations = new ArrayList<>();
         try {
             var rows = neo4j.query("""
-                            MATCH (it:Item {project_id: $pid, name: $name})-[r]-(n)
+                            MATCH (it:Item {project_id: $pid, name: $name, identity: $identity})-[r]-(n)
                             RETURN type(r) AS relType, labels(n) AS nodeLabels, n.name AS nodeName
                             LIMIT 20
                             """)
                     .bind(projectId).to("pid")
                     .bind(name).to("name")
+                    .bind(item.getIdentity() != null ? item.getIdentity() : "{}").to("identity")
                     .fetch()
                     .all();
             for (var row : rows) {
@@ -305,7 +363,34 @@ public class ItemService {
             log.warn("Neo4j item relations query failed for {}/{}", projectId, name, e);
         }
 
-        return new ItemQueryResult("ok", name, item.getCurrentStatus(), profile, history, relations);
+        // If multiple matches, build allProfiles
+        List<Map<String, Object>> allProfiles = matches.size() > 1
+                ? matches.stream().map(this::buildItemProfile).toList()
+                : List.of();
+
+        String status = matches.size() > 1 && identity == null ? "multiple" : "ok";
+        return new ItemQueryResult(status, name, item.getCurrentStatus(), profile, history, relations, allProfiles);
+    }
+
+    private Map<String, Object> buildItemProfile(Item item) {
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("name", item.getName());
+        profile.put("type", item.getItemType());
+        profile.put("description", item.getDescription());
+        profile.put("origin", item.getOrigin());
+        profile.put("significance", item.getSignificance());
+        profile.put("identity", item.getIdentity() != null ? item.getIdentity() : "{}");
+        try {
+            profile.put("properties", item.getProperties() != null
+                    ? mapper.readValue(item.getProperties(), Object.class) : Map.of());
+        } catch (Exception e) {
+            profile.put("properties", item.getProperties());
+        }
+        profile.put("current_holder", item.getCurrentHolder());
+        profile.put("current_location", item.getCurrentLocation());
+        profile.put("current_status", item.getCurrentStatus());
+        profile.put("first_chapter", item.getFirstChapter());
+        return profile;
     }
 
     // ── result records ──
@@ -320,6 +405,7 @@ public class ItemService {
     public record ItemQueryResult(String status, String name, String currentStatus,
                                   Map<String, Object> profile,
                                   List<Map<String, Object>> ownerHistory,
-                                  List<Map<String, Object>> relations) {
+                                  List<Map<String, Object>> relations,
+                                  List<Map<String, Object>> allProfiles) {
     }
 }

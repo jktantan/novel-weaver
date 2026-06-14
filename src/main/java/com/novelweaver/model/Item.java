@@ -20,7 +20,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "items", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"project_id", "name"})
 }, indexes = {
         @Index(name = "idx_items_project", columnList = "project_id")
 })
@@ -63,6 +62,10 @@ public class Item {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String properties;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String identity;
 
     // ── 当前持有者 / 位置（冗余字段，方便快速查询） ──
 

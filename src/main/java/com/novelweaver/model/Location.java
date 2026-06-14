@@ -20,7 +20,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "locations", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"project_id", "name"})
 }, indexes = {
         @Index(name = "idx_locations_project", columnList = "project_id")
 })
@@ -71,6 +70,10 @@ public class Location {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String changeLog;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String identity;
 
     @Column(columnDefinition = "text")
     private String currentStatus;

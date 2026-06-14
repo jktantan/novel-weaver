@@ -11,7 +11,15 @@ import java.util.UUID;
 
 @Repository
 public interface ItemRepository extends JpaRepository<Item, UUID> {
-    Optional<Item> findByProjectAndName(Project project, String name);
+    /**
+     * Find all items by project and name (may return multiple if identity differs).
+     */
+    List<Item> findByProjectAndName(Project project, String name);
+
+    /**
+     * Exact match by project, name, and identity JSON string.
+     */
+    Optional<Item> findByProjectAndNameAndIdentity(Project project, String name, String identity);
 
     List<Item> findAllByProject(Project project);
 }

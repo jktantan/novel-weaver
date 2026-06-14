@@ -7,6 +7,7 @@ name: ""                        # 项目中文名
 slug: ""                        # 英文 slug（用于 API 路径，如 yideiming）
 type: original                  # original | fanfic
 status: active                  # active | archived | draft
+mcp_project_id: ""              # MCP 项目 UUID（project_init 返回后自动填入，勿手动修改）
 
 # ═══════════ 主角与视角 ═══════════
 protagonist: ""                 # 主角名

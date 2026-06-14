@@ -297,6 +297,7 @@ public class ChapterService {
                 neo4j.query("""
                                 UNWIND $names AS name
                                 MERGE (c:Character {project_id: $pid, name: name})
+                                SET c.identity = coalesce(c.identity, '{}')
                                 WITH c
                                 MATCH (ch:Chapter {project_id: $pid, number: $num})
                                 MERGE (c)-[:APPEARS_IN]->(ch)
@@ -317,6 +318,7 @@ public class ChapterService {
                 neo4j.query("""
                                 UNWIND $names AS name
                                 MERGE (it:Item {project_id: $pid, name: name})
+                                SET it.identity = coalesce(it.identity, '{}')
                                 WITH it
                                 MATCH (ch:Chapter {project_id: $pid, number: $num})
                                 MERGE (it)-[:APPEARS_IN]->(ch)
@@ -337,6 +339,7 @@ public class ChapterService {
                 neo4j.query("""
                                 UNWIND $names AS name
                                 MERGE (loc:Location {project_id: $pid, name: name})
+                                SET loc.identity = coalesce(loc.identity, '{}')
                                 WITH loc
                                 MATCH (ch:Chapter {project_id: $pid, number: $num})
                                 MERGE (loc)-[:APPEARS_IN]->(ch)

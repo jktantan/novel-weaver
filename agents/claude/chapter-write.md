@@ -2,16 +2,24 @@
 
 当用户说"写大纲""写第N章""写正文"时，按对应流程执行。
 
-## 前置步骤：读 Ollama 配置
+## 前置步骤：读配置文件
 
-🔴 先读 `ollama-config.yaml`（项目根目录，与 project.yaml 同级），提取：
+🔴 先读项目根目录下的配置文件：
 
-| 变量                  | 字段                | 默认值         |
-|---------------------|-------------------|-------------|
-| `{embedding_model}` | `embedding_model` | `bge-m3`    |
-| `{summary_model}`   | `summary_model`   | （空）         |
-| `{ollama_host}`     | `ollama_host`     | `localhost` |
-| `{ollama_port}`     | `ollama_port`     | `11434`     |
+```
+read_file project.yaml          ← 🔴 获取 mcp_project_id（后续所有 MCP 调用需要）
+read_file ollama-config.yaml
+```
+
+| 变量                  | 字段                | 来源                   | 默认值         |
+|---------------------|-------------------|----------------------|-------------|
+| `{projectId}`       | `mcp_project_id`  | `project.yaml`       | （无，必须存在）    |
+| `{embedding_model}` | `embedding_model` | `ollama-config.yaml` | `bge-m3`    |
+| `{summary_model}`   | `summary_model`   | `ollama-config.yaml` | （空）         |
+| `{ollama_host}`     | `ollama_host`     | `ollama-config.yaml` | `localhost` |
+| `{ollama_port}`     | `ollama_port`     | `ollama-config.yaml` | `11434`     |
+
+后续步骤中所有 `{projectId}` 从 `project.yaml` 取值，`{embedding_model}` 等从 `ollama-config.yaml` 取值。
 
 ---
 
@@ -170,6 +178,7 @@ write_file foreshadowing.yaml          ← 伏笔更新
 - **写完即审**：审核是写作步骤的一部分
 - **一次性入库**：整章写完再批量调 MCP，不要写一段同步一段
 - **本地+DB双写**：chapters/ 和 states/ 必须与 MCP 数据库同步
+- **同名角色**：如项目有同名实体（如尼尔双子），`character_save`/`character_status` 等传 `identity` JSON 精确匹配
 - **{lang} 语言**：全部内容用项目初始化时选择的写作语言
 
 ---
