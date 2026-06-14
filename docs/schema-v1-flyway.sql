@@ -230,31 +230,7 @@ CREATE TABLE foreshadowing_index (
 CREATE INDEX idx_foreshadowing_project ON foreshadowing_index (project_id);
 
 -- ════════════════════════════════════════════════════════════════════════════
--- 表 9: character_voiceprints — 声纹样本（新規 / New）
--- CN: 角色声纹样本——手动种子 / 正文提取 / 正典来源，含向量用于相似场景检索
--- JP: キャラクター声紋サンプル——手動シード / 本文抽出 / 正典ソース、類似シーン検索用ベクトル付き
--- EN: Character voiceprint samples — seed / extracted / canon, with vectors for similar-scene retrieval
--- ════════════════════════════════════════════════════════════════════════════
-
-CREATE TABLE character_voiceprints (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_id  UUID NOT NULL REFERENCES character_profiles(id) ON DELETE CASCADE,
-    project_id    UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    chapter_id    UUID REFERENCES chapters(id),
-    dialogue      TEXT NOT NULL,
-    source        VARCHAR(20) DEFAULT 'seed',     -- seed / extracted / canon
-    embedding     vector(1024),
-    meta          JSONB DEFAULT '{}',
-    created_at    TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX idx_voiceprints_char ON character_voiceprints (character_id);
-CREATE INDEX idx_voiceprints_project ON character_voiceprints (project_id);
-CREATE INDEX idx_voiceprints_embedding ON character_voiceprints
-    USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
-
--- ════════════════════════════════════════════════════════════════════════════
--- 表 10: canon_sources — 正典来源（新規 / New）
+-- 表 9: canon_sources — 正典来源（新規 / New）
 -- CN: 正典资料出处——游戏、书籍等来源，标记是否已人工审核
 -- JP: 正典資料の出典——ゲーム、書籍などのソース、人為チェック済みかどうかを記録
 -- EN: Canon source references — game, book, etc., with verification status

@@ -769,10 +769,10 @@ curl http://localhost:8883/health
                           │                  └───────────────────┘
                           │ 1:N
                           ▼
-                    ┌──────────────────┐     ┌───────────────────┐
-                    │ character_       │     │ character_        │
-                    │ profiles         │──1:N│ voiceprints       │
-                    └──────────────────┘     └───────────────────┘
+                    ┌──────────────────┐
+                    │ character_       │
+                    │ profiles         │
+                    └──────────────────┘
                           │
                           │ 1:N
                           ▼
@@ -797,10 +797,10 @@ curl http://localhost:8883/health
                           │                  └───────────────────┘
                           │ 1:N
                           ▼
-                    ┌──────────────────┐     ┌───────────────────┐
-                    │ character_       │     │ character_        │
-                    │ profiles         │──1:N│ voiceprints       │
-                    └──────────────────┘     └───────────────────┘
+                    ┌──────────────────┐
+                    │ character_       │
+                    │ profiles         │
+                    └──────────────────┘
                           │
                           │ 1:N
                           ▼
@@ -825,10 +825,10 @@ curl http://localhost:8883/health
                           │                  └───────────────────┘
                           │ 1:N
                           ▼
-                    ┌──────────────────┐     ┌───────────────────┐
-                    │ character_       │     │ character_        │
-                    │ profiles         │──1:N│ voiceprints       │
-                    └──────────────────┘     └───────────────────┘
+                    ┌──────────────────┐
+                    │ character_       │
+                    │ profiles         │
+                    └──────────────────┘
                           │
                           │ 1:N
                           ▼
@@ -855,7 +855,6 @@ curl http://localhost:8883/health
 | `character_profiles`      | 角色画像     | キャラクター設定       | Character profiles           |
 | `character_snapshots`     | 每章后状态快照  | 章ごとの状態スナップショット | Per-chapter state snapshot   |
 | `character_relationships` | 人物关系     | キャラクター関係       | Character relationships      |
-| `character_voiceprints`   | 声纹样本     | 声紋サンプル         | Voiceprint samples           |
 | `foreshadowing_index`     | 伏笔登记     | 伏線管理           | Foreshadowing registry       |
 | `deduction_logs`          | 推演日志     | 推論ログ           | Deduction logs               |
 | `locations`               | 地点档案     | ロケーション管理       | Location registry            |
@@ -1093,42 +1092,14 @@ The deduction engine is NOT deployed on Gateway. It runs inside Reasonix (Claude
 
 **EN**：Voiceprints define a character's speech patterns — word choice, sentence length, tone, emotional expression. Core problem: LLMs tend to make all characters speak the same way — "gently said," "softly asked." The voiceprint mechanism ensures each character sounds distinct.
 
-### 10.2 两种建立路径 / 二つの構築方法 / Two Setup Paths
-
-**CN**
-
-| 角色来源 | 声纹建立方式 | 初始数据 | 后续更新 |
-|----------|-------------|---------|---------|
-| **同人角色** | 从正典资料中提取该角色的标志性台词 | 手动录入 3-5 句经典台词 → 存入 `character_voiceprints` | 写新章后，自动提取本章对话追加 |
-| **原创角色** | 作者先手写 2-3 句代表性对话作为"种子"；写完 5 章后，从正文自动提取对话增量更新 | 手写种子 → 存入 | 每章完成后自动追加 |
-
-**JP**
-
-| キャラクター由来 | 声紋構築方法 | 初期データ | 更新 |
-|----------------|-------------|-----------|------|
-| **二次創作キャラ** | 正典資料から当該キャラの特徴的な台詞を抽出 | 手動で 3-5 文の台詞を入力 → `character_voiceprints` に保存 | 新章執筆後、本章の会話を自動抽出して追加 |
-| **オリジナルキャラ** | 作者が 2-3 文の代表的な会話を「シード」として手書き；5 章執筆後、本文から自動抽出で差分更新 | 手書きシード → 保存 | 各章完了後に自動追加 |
-
-**EN**
-
-| Character Source | Voiceprint Setup | Initial Data | Updates |
-|-----------------|-----------------|-------------|---------|
-| **Fanfic characters** | Extract iconic lines from canon material | Manually enter 3-5 classic lines → store in `character_voiceprints` | Auto-extract dialogue from new chapters |
-| **Original characters** | Author hand-writes 2-3 representative dialogues as "seeds"; after 5 chapters, auto-extract from text | Hand-written seeds → store | Auto-append after each chapter |
-
-**CN 核心原则**：声纹不需要一开始就完美。种子 + 每章自动增量 = 越写越准。
-
-**JP 核心原則**：声紋は最初から完璧である必要はない。シード＋章ごとの自動増分＝書けば書くほど正確に。
-
-**EN Core principle**: Voiceprints don't need to be perfect from the start. Seeds + auto-incremental per chapter = gets more accurate the more you write.
-
 ### 10.3 数据库设计 / データベース設計 / Database Design
 
-**CN**：在 `characters` 表中扩展——加 `voice_seeds`（手写种子台词数组）和 `voice_meta`（声线硬约束 JSON）。另建 `character_voiceprints` 表存储提取的对话样本及向量。
+**CN**：在 `characters` 表中扩展——加 `voice_seeds`（手写种子台词数组）和 `voice_meta`（声线硬约束 JSON）。
 
-**JP**：`characters` テーブルを拡張——`voice_seeds`（手書きシード台詞配列）と `voice_meta`（声線ハード制約 JSON）を追加。`character_voiceprints` テーブルで抽出した会話サンプルとベクトルを保存。
+**JP**：`characters` テーブルを拡張——`voice_seeds`（手書きシード台詞配列）と `voice_meta`（声線ハード制約 JSON）を追加。
 
-**EN**：Extend the `characters` table — add `voice_seeds` (hand-written seed dialogue array) and `voice_meta` (voice constraint JSON). Create `character_voiceprints` table for extracted dialogue samples and vectors.
+**EN**：Extend the `characters` table — add `voice_seeds` (hand-written seed dialogue array) and `voice_meta` (voice
+constraint JSON).
 
 ```sql
 ALTER TABLE characters ADD COLUMN voice_seeds TEXT[] DEFAULT '{}';
@@ -1173,14 +1144,6 @@ ALTER TABLE characters ADD COLUMN voice_meta JSONB DEFAULT '{}';
 **JP**：推論出力 JSON に `voice_check` フィールドを追加し、LLM 自身に出力をチェックさせる。`deduce_verify` ツールが `fails` 配列を確認——内容があれば「声線不一致、要確認」とマーク。
 
 **EN**：Add a `voice_check` field to deduction output JSON, letting the LLM self-check its own output. The `deduce_verify` tool inspects the `fails` array — if non-empty, marks as "voice mismatch, needs human review."
-
-### 10.6 自动提取对话 / 自動会話抽出 / Auto Dialogue Extraction
-
-**CN**：`chapter_sync` 的收尾步骤——正则匹配对话 → 关联说话人 → 去重 → 批量 embedding → 写入 `character_voiceprints`。自动提取的 `source='extracted'`，可信度低于种子和正典。
-
-**JP**：`chapter_sync` の締めくくり——正規表現で会話をマッチ→話者を特定→重複除去→一括 embedding→`character_voiceprints` に書き込み。自動抽出の `source='extracted'` は信頼度がシードや正典より低い。
-
-**EN**：Final step of `chapter_sync` — regex match dialogue → identify speaker → deduplicate → batch embedding → write to `character_voiceprints`. Auto-extracted `source='extracted'` has lower confidence than seeds and canon.
 
 ---
 

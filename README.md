@@ -89,7 +89,7 @@ gateway/
 
 **Phase 2 — 同名实体区分** ✅
 
-- [x] `identity` JSONB 字段已在 V1 中，利用它支持同名角色/物品/地点（如尼尔的多组双子姐妹）
+- [x] `identity` JSONB 字段已在 V1 中，利用它支持同名角色/物品/地点（如不同宇宙/平行世界的同名角色）
 - [x] 同名时返回列表让 AI 根据 `identity` 上下文判断
 
 **Phase 3 — 本地文件 ↔ PG 双向恢复**
@@ -196,7 +196,7 @@ gateway/
 
 **Phase 2 — 同名エンティティ区別** ✅
 
-- [x] `identity` JSONB カラムで同名キャラ/アイテム/場所を区別（例：NieR の双子姉妹）
+- [x] `identity` JSONB カラムで同名キャラ/アイテム/場所を区別（例：異なる宇宙の同名キャラ）
 - [x] 同名時にリストを返し、AI が `identity` コンテキストで判断
 
 **Phase 3 — ローカル ↔ PG 双方向復元**
@@ -303,7 +303,8 @@ gateway/
 
 **Phase 2 — Same-name entity disambiguation** ✅
 
-- [x] `identity` JSONB column ready, supports same-name characters/items/locations (e.g. NieR twin sisters)
+- [x] `identity` JSONB column ready, supports same-name characters/items/locations (e.g. same-name characters across
+  different universes)
 - [x] Return list on same-name conflict, AI resolves via `identity` context
 
 **Phase 3 — Local files ↔ PG bidirectional recovery**

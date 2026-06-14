@@ -20,6 +20,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class ChapterService {
@@ -46,22 +48,75 @@ public class ChapterService {
         this.meiliClient = wcb.baseUrl(meiliUrl).defaultHeader("Authorization", "Bearer " + meiliKey).build();
     }
 
-    private List<Segment> segment(String content) {
-        if (content == null || content.isBlank()) return List.of();
+    public static List<Segment> segment(String content) {
+        if (content == null) return List.of();
+        if (content.isEmpty()) return List.of(new Segment("", "", ""));
+
+        // Normalize line endings
+        String normalized = content.replace("\r\n", "\n").replace("\r", "\n");
+
+        // Split at heading positions using zero-width lookahead
+        Pattern splitPat = Pattern.compile("(?m)^(?=#{1,6}\\s)");
+        String[] sections = splitPat.split(normalized);
+
+        Pattern headingPat = Pattern.compile("^(#{1,6})\\s+(.*)");
         List<Segment> segs = new ArrayList<>();
-        String[] parts = content.split("\n\n");
-        int seq = 0;
-        for (String part : parts) {
-            String trimmed = part.trim();
-            if (trimmed.isBlank()) continue;
-            segs.add(new Segment("scene_" + (++seq), trimmed, "paragraph"));
+
+        for (String section : sections) {
+            String trimmed = section.strip();
+            if (trimmed.isEmpty()) continue;
+
+            Matcher hm = headingPat.matcher(trimmed);
+            if (hm.find()) {
+                String heading = hm.group(2).strip();
+                segs.add(new Segment(heading, trimmed, ""));
+            } else {
+                segs.add(new Segment(trimmed, trimmed, ""));
+            }
         }
-        return segs.isEmpty() ? List.of(new Segment("main", content, "paragraph")) : segs;
+
+        if (segs.isEmpty()) {
+            // Whitespace-only input
+            return List.of(new Segment("", "", ""));
+        }
+
+        // Chunk long segments
+        return chunkLong(segs);
     }
 
-    private String textTruncate(String text, int maxLen) {
+    private static List<Segment> chunkLong(List<Segment> segs) {
+        List<Segment> result = new ArrayList<>();
+        for (Segment s : segs) {
+            int cpCount = s.text().codePointCount(0, s.text().length());
+            if (cpCount <= 800) {
+                result.add(s);
+            } else {
+                String text = s.text();
+                int[] codepoints = text.codePoints().toArray();
+                int total = codepoints.length;
+                int pos = 0;
+                int chunkNo = 0;
+                while (pos < total) {
+                    int end = Math.min(pos + 800, total);
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = pos; i < end; i++) {
+                        sb.appendCodePoint(codepoints[i]);
+                    }
+                    chunkNo++;
+                    String sceneName = chunkNo == 1 ? s.scene() : s.scene() + "[" + chunkNo + "]";
+                    result.add(new Segment(sceneName, sb.toString(), ""));
+                    pos = end;
+                }
+            }
+        }
+        return result;
+    }
+
+    public static String textTruncate(String text, int maxLen) {
         if (text == null) return "";
-        return text.length() <= maxLen ? text : text.substring(0, maxLen);
+        if (text.length() <= maxLen) return text;
+        if (maxLen == 0) return "\u2026";
+        return text.substring(0, maxLen) + "\u2026";
     }
 
     @McpTool(name = "chapter_sync", description = "保存/更新章节 | CN 保存/更新章节 / JP 章を保存/更新 / EN Save/update chapter")
@@ -268,7 +323,13 @@ public class ChapterService {
         return new ChapterListResult(all.size(), result);
     }
 
-    private record Segment(String scene, String text, String type) {
+    public static String classify(String text) {
+        if (text == null || text.isEmpty()) return "narrative";
+        long quoteCount = text.chars().filter(c -> c == '"' || c == '\u201C' || c == '\u201D').count();
+        return (double) quoteCount / text.length() > 0.05 ? "dialogue" : "narrative";
+    }
+
+    public record Segment(String scene, String text, String type) {
     }
 
     public record ChapterSyncResult(String status, String chapterId, int version, int paragraphCount,

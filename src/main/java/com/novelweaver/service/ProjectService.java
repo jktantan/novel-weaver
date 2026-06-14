@@ -27,7 +27,7 @@ public class ProjectService {
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
     private static final String[] PG_DIRECT_TABLES = {
-            "character_voiceprints", "deduction_logs", "chapter_paragraphs",
+            "deduction_logs", "chapter_paragraphs",
             "character_relationships", "foreshadowing_index", "canon_event_status",
             "canon_relationships", "canon_events", "canon_characters", "canon_sources",
             "character_snapshots", "character_profiles", "timeline_events", "timelines",
@@ -159,7 +159,7 @@ public class ProjectService {
     @Transactional
     public ServiceResetResult reset() {
         List<String> allTables = Arrays.asList(
-                "character_voiceprints", "character_snapshots", "chapter_paragraphs",
+                "character_snapshots", "chapter_paragraphs",
                 "chapter_versions", "deduction_logs", "timeline_events", "timelines",
                 "timeline_links", "universe_relations", "universes", "foreshadowing_index",
                 "canon_event_status", "character_relationships", "canon_relationships",

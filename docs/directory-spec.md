@@ -101,13 +101,13 @@ type: fanfic                  # original | fanfic
 status: active                # active | archived | draft
 
 # ── 同人小说专有字段 ──
-fandom: "尼尔：人工生命"
-canon_version: "Replicant ver.1.22 + Automata"
+fandom: "江湖风云录"
+canon_version: "三部曲 + 外传"
 canon_sources:
-  - name: "尼尔：人工生命 Ver.1.22474487139..."
+  - name: "江湖风云录·第一部"
     type: game
     year: 2021
-  - name: "尼尔：机械纪元"
+  - name: "江湖风云录·外传"
     type: game
     year: 2017
 canon_constraints:            # 正典红线——推演不能违反
@@ -186,8 +186,8 @@ canon/
 ├── timeline.md               # 正典事件时间线（🔴🟡🟢 约束标注）
 ├── world-overview.md         # 正典世界观概述
 ├── characters/               # 正典人物事实（每人一个文件）
-│   ├── 凯妮.md               #   - 正典年龄、经历、关键事件
-│   ├── 尼尔.md               #   - 不包含"本故事中"的演绎
+│   ├── 林青.md               #   - 正典年龄、经历、关键事件
+│   ├── 原作资料.md               #   - 不包含"本故事中"的演绎
 │   └── ...
 ├── relationships.yaml        # 正典人物关系（机器可读）
 │   # 例:
@@ -448,9 +448,9 @@ current_status: {正常/损坏/遗失/销毁}
 | 项目目录  | `{中文名}` 或 `{英文slug}` | `{项目名}` / `{project-slug}` |
 | 大纲文件  | `ch{NNNN}-{标题}.md`   | `ch0005-第一个夜晚.md`          |
 | 正文文件  | `ch{NNNN}-{标题}.md`   | `ch0005-第一个夜晚.md`          |
-| 人物画像  | `{角色名}.md`           | `凯妮.md`                    |
+| 人物画像  | `{角色名}.md`           | `林青.md`                    |
 | 物品档案  | `{物品名}.md`           | `圣剑·誓约.md`                 |
-| 正典人物  | `{角色名}.md`           | `凯妮.md`                    |
+| 正典人物  | `{角色名}.md`           | `林青.md`                    |
 | 状态快照  | `ch{NNNN}.yaml`      | `ch0006.yaml`              |
 | 伏笔编号  | `F{NNN}`             | `F001`                     |
 | 世界观文件 | `{主题}.md`            | `魔法体系.md`                  |
@@ -602,13 +602,13 @@ type: fanfic                  # original | fanfic
 status: active                # active | archived | draft
 
 # ── 二次創作専用フィールド ──
-fandom: "尼尔：人工生命"
-canon_version: "Replicant ver.1.22 + Automata"
+fandom: "江湖风云录"
+canon_version: "三部曲 + 外传"
 canon_sources:
-  - name: "尼尔：人工生命 Ver.1.22474487139..."
+  - name: "江湖风云录·第一部"
     type: game
     year: 2021
-  - name: "尼尔：机械纪元"
+  - name: "江湖风云录·外传"
     type: game
     year: 2017
 canon_constraints:            # 正典の制約——推論で違反不可
@@ -687,8 +687,8 @@ canon/
 ├── timeline.md               # 正典イベント時系列（🔴🟡🟢 制約ラベル）
 ├── world-overview.md         # 正典世界観概要
 ├── characters/               # 正典キャラクター事実（一人一ファイル）
-│   ├── 凯妮.md               #   - 正典の年齢、経歴、キーイベント
-│   ├── 尼尔.md               #   - 「本作における」解釈は含まない
+│   ├── 林青.md               #   - 正典の年齢、経歴、キーイベント
+│   ├── 原作资料.md               #   - 「本作における」解釈は含まない
 │   └── ...
 ├── relationships.yaml        # 正典キャラクター関係（機械可読）
 │   # 例:
@@ -949,9 +949,9 @@ current_status: {正常/破損/紛失/破壊}
 | プロジェクトディレクトリ | `{中国語名}` または `{英字slug}` | `{项目名}` / `{project-slug}` |
 | 概要ファイル       | `ch{NNNN}-{タイトル}.md`    | `ch0005-第一个夜晚.md`          |
 | 本文ファイル       | `ch{NNNN}-{タイトル}.md`    | `ch0005-第一个夜晚.md`          |
-| キャラクター設定     | `{キャラ名}.md`             | `凯妮.md`                    |
+| キャラクター設定     | `{キャラ名}.md`             | `林青.md`                    |
 | アイテムアーカイブ    | `{アイテム名}.md`            | `圣剑·誓约.md`                 |
-| 正典キャラ        | `{キャラ名}.md`             | `凯妮.md`                    |
+| 正典キャラ        | `{キャラ名}.md`             | `林青.md`                    |
 | 状態スナップショット   | `ch{NNNN}.yaml`         | `ch0006.yaml`              |
 | 伏線番号         | `F{NNN}`                | `F001`                     |
 | 世界観ファイル      | `{テーマ}.md`              | `魔法体系.md`                  |
@@ -1103,13 +1103,13 @@ type: fanfic                  # original | fanfic
 status: active                # active | archived | draft
 
 # ── Fanfic-specific fields ──
-fandom: "尼尔：人工生命"
-canon_version: "Replicant ver.1.22 + Automata"
+fandom: "江湖风云录"
+canon_version: "三部曲 + 外传"
 canon_sources:
-  - name: "尼尔：人工生命 Ver.1.22474487139..."
+  - name: "江湖风云录·第一部"
     type: game
     year: 2021
-  - name: "尼尔：机械纪元"
+  - name: "江湖风云录·外传"
     type: game
     year: 2017
 canon_constraints:            # Canon red lines — deduction must not violate
@@ -1188,8 +1188,8 @@ canon/
 ├── timeline.md               # Canon event timeline (🔴🟡🟢 constraint labels)
 ├── world-overview.md         # Canon world overview
 ├── characters/               # Canon character facts (one file per person)
-│   ├── 凯妮.md               #   - Canon age, history, key events
-│   ├── 尼尔.md               #   - Does NOT include "in this story" interpretations
+│   ├── 林青.md               #   - Canon age, history, key events
+│   ├── 原作资料.md               #   - Does NOT include "in this story" interpretations
 │   └── ...
 ├── relationships.yaml        # Canon character relationships (machine-readable)
 │   # Example:
@@ -1450,9 +1450,9 @@ current_status: {normal/damaged/lost/destroyed}
 | Project directory  | `{Chinese name}` or `{English slug}` | `{project-name}` / `{project-slug}` |
 | Outline file       | `ch{NNNN}-{title}.md`                | `ch0005-第一个夜晚.md`                   |
 | Draft file         | `ch{NNNN}-{title}.md`                | `ch0005-第一个夜晚.md`                   |
-| Character profile  | `{name}.md`                          | `凯妮.md`                             |
+| Character profile  | `{name}.md`                          | `林青.md`                             |
 | Item archive       | `{item-name}.md`                     | `圣剑·誓约.md`                          |
-| Canon character    | `{name}.md`                          | `凯妮.md`                             |
+| Canon character    | `{name}.md`                          | `林青.md`                             |
 | State snapshot     | `ch{NNNN}.yaml`                      | `ch0006.yaml`                       |
 | Foreshadowing code | `F{NNN}`                             | `F001`                              |
 | Worldbuilding file | `{topic}.md`                         | `魔法体系.md`                           |

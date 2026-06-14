@@ -8,10 +8,12 @@ package com.novelweaver.model;
  * EN Item archive — origin, ownership, usage, lifecycle
  */
 
+import com.novelweaver.type.PgVectorType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
@@ -88,6 +90,7 @@ public class Item {
 
     // ── pgvector embedding（语义搜索） ──
 
+    @Type(PgVectorType.class)
     @Column(columnDefinition = "vector(1024)")
     private String embedding;
 

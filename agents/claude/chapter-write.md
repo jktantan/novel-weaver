@@ -178,7 +178,7 @@ write_file foreshadowing.yaml          ← 伏笔更新
 - **写完即审**：审核是写作步骤的一部分
 - **一次性入库**：整章写完再批量调 MCP，不要写一段同步一段
 - **本地+DB双写**：chapters/ 和 states/ 必须与 MCP 数据库同步
-- **同名角色**：如项目有同名实体（如尼尔双子），`character_save`/`character_status` 等传 `identity` JSON 精确匹配
+- **同名角色**：如项目有同名实体（如不同宇宙的同一人物），`character_save`/`character_status` 等传 `identity` JSON 精确匹配
 - **{lang} 语言**：全部内容用项目初始化时选择的写作语言
 
 ---

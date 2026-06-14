@@ -11,14 +11,14 @@ runAs: inline
 `project_init` 返回后自动写入。
 >
 > 🔴 **同名实体区分（identity）**：`character_save`、`item_register`、`location_register` 等工具支持可选的 `identity` JSON
-> 参数。用于区分同一项目内的同名实体（如尼尔的双子姐妹、平行世界同一地点）。
+> 参数。用于区分同一项目内的同名实体（如不同宇宙的同名角色、平行世界同一地点）。
 >
 > ```reasonix
-> # 例：注册第二组 Devola
+> # 例：注册同名角色的另一版本
 > mcp__novel-mcp-server__character_save
 >   projectId: "<项目ID>"
->   name: "Devola"
->   identity: {"generation": 2, "assigned_to": "海岸镇"}
+>   name: "林青"
+>   identity: {"universe": "平行世界", "role": "游侠"}
 > ```
 >
 > - 不传 `identity`：同名且唯一时正常工作；同名多条时返回 `allProfiles` 列表
@@ -72,7 +72,7 @@ mcp__novel-mcp-server__chapter_list
 mcp__novel-mcp-server__character_save
   projectId: "<项目ID>"
   name: "角色名"
-  identity: {"generation":1}   // 可选——区分同名角色（JSON，如尼尔双子）
+  identity: {"generation":1}   // 可选——区分同名角色（JSON，如不同宇宙的同名角色）
   bio: "简介"
   traits: ["冷静","果断"]
   voiceSeeds: ["标志性台词1","台词2"]
@@ -218,37 +218,37 @@ mcp__novel-mcp-server__timeline_link_query
 ```reasonix
 mcp__novel-mcp-server__canon_import
   projectId: "<项目ID>"
-  sourceName: "EVA Wiki"
-  text: "绫波丽，EVA初号机驾驶员，14岁..."
+  sourceName: "官方Wiki"
+  text: "林青，云隐村武者，18岁，擅长剑术..."
   // 文本存入 canon_sources，字数确认
 
 mcp__novel-mcp-server__canon_character_add
   projectId: "<项目ID>"
-  name: "绫波丽"
-  aliases: ["零","第一适格者"]
-  bio: "EVA初号机驾驶员，14岁，沉默寡言"
+  name: "林青"
+  aliases: ["青","剑客"]
+  bio: "云隐村武者，18岁，沉默寡言，剑术精湛"
   sourceId: "<canon_import 返回的 sourceId>"  // 可选
 
 mcp__novel-mcp-server__canon_event_add
   projectId: "<项目ID>"
-  name: "第6使徒战"
+  name: "首次出师战"
   timelinePos: "早期"
-  dateLabel: "2015年"
+  dateLabel: "星历三年"
   canonLevel: "核心"          // 核心 | 重要 | 次要
-  description: "绫波丽首次出战"
+  description: "林青首次下山应战"
   sourceId: "..."            // 可选
 
 mcp__novel-mcp-server__canon_relationship_add
   projectId: "<项目ID>"
-  fromChar: "绫波丽"
-  toChar: "碇真嗣"
-  relType: "同僚"
-  note: "同为EVA驾驶员"
+  fromChar: "林青"
+  toChar: "陈墨"
+  relType: "同门"
+  note: "同为云隐村学徒"
   sourceId: "..."            // 可选
 
 mcp__novel-mcp-server__canon_search
   projectId: "<项目ID>"
-  query: "绫波丽"
+  query: "林青"
   embedding: "<bge-m3 向量>"  // 可选——精确语义搜索
 
 mcp__novel-mcp-server__canon_verify
@@ -270,7 +270,7 @@ mcp__novel-mcp-server__canon_status_set
 ```reasonix
 mcp__novel-mcp-server__universe_create
   projectId: "<项目ID>"
-  name: "尼尔正史宇宙"
+  name: "原作正史宇宙"
   type: "fanfic"          // original | fanfic | crossover
   description: "基于游戏原作的宇宙"
 
@@ -307,13 +307,13 @@ mcp__novel-mcp-server__semantic_search
 
 mcp__novel-mcp-server__graph_query
   projectId: "<项目ID>"
-  entityName: "绫波丽"
+  entityName: "林青"
   depth: 2               // 可选，默认2，上限10
 
 mcp__novel-mcp-server__graph_path
   projectId: "<项目ID>"
-  from: "绫波丽"
-  to: "碇真嗣"
+  from: "林青"
+  to: "陈墨"
 ```
 
 ## 推演

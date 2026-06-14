@@ -303,38 +303,7 @@ EN active / triggered / closed';
 CREATE INDEX idx_foreshadowing_project ON foreshadowing_index (project_id);
 
 -- ════════════════════════════════════════════════════════════════════════════
--- 表 9: character_voiceprints
--- ════════════════════════════════════════════════════════════════════════════
-
-CREATE TABLE character_voiceprints
-(
-    id           UUID PRIMARY KEY DEFAULT uuidv7(),
-    character_id UUID NOT NULL REFERENCES character_profiles (id) ON DELETE CASCADE,
-    project_id   UUID NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    chapter_id   UUID REFERENCES chapters (id),
-    dialogue     TEXT NOT NULL,
-    source       VARCHAR(20)      DEFAULT 'seed',
-    embedding    vector(1024),
-    meta         JSONB            DEFAULT '{}',
-    created_at   TIMESTAMPTZ      DEFAULT now()
-);
-
-COMMENT
-ON TABLE character_voiceprints IS '声纹样本库——角色的标志性台词及其向量表示
-JP 声紋サンプル庫——キャラクターの特徴的台詞とそのベクトル表現
-EN Voiceprint library — character signature lines and their vector representations';
-COMMENT
-ON COLUMN character_voiceprints.source IS 'seed(种子)/extracted(提取)/canon(正典)
-JP seed(種)/extracted(抽出)/canon(正典)
-EN seed / extracted / canon';
-
-CREATE INDEX idx_voiceprints_char ON character_voiceprints (character_id);
-CREATE INDEX idx_voiceprints_project ON character_voiceprints (project_id);
-CREATE INDEX idx_voiceprints_embedding ON character_voiceprints
-    USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
-
--- ════════════════════════════════════════════════════════════════════════════
--- 表 10: canon_sources
+-- 表 9: canon_sources
 -- ════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE canon_sources

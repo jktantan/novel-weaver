@@ -125,12 +125,11 @@ gateway/src/main/resources/
 | `character_snapshots` | 每章后状态快照 | character_id(FK), chapter_id(FK), location, physical, psychology |
 | `locations` | 地点档案管理 | name, type, region, canon_description, change_log(jsonb), current_status |
 
-#### 关系/伏笔/声纹
+#### 关系/伏笔
 
 | 表 | 用途 |
 |----|------|
 | `character_relationships` | 人物关系 |
-| `character_voiceprints` | 声纹样本 |
 | `foreshadowing_index` | 伏笔登记 |
 | `deduction_logs` | 推演日志 |
 
@@ -339,12 +338,11 @@ gateway/src/main/resources/
 | `character_snapshots` | 章ごとの状態スナップショット | character_id(FK), chapter_id(FK), location, physical, psychology |
 | `locations` | ロケーション管理 | name, type, region, canon_description, change_log(jsonb), current_status |
 
-#### 関係/伏線/声紋
+#### 関係/伏線
 
 | テーブル | 用途 |
 |----------|------|
 | `character_relationships` | キャラクター関係 |
-| `character_voiceprints` | 声紋サンプル |
 | `foreshadowing_index` | 伏線管理 |
 | `deduction_logs` | 推論ログ |
 
@@ -554,12 +552,11 @@ All DDL in `db/migration/V1__schema.sql`（单文件，所有表）.
 | `character_snapshots` | Per-chapter state snapshots | character_id(FK), chapter_id(FK), location, physical, psychology |
 | `locations` | Location registry | name, type, region, canon_description, change_log(jsonb), current_status |
 
-#### Relationships / Foreshadowing / Voiceprints
+#### Relationships / Foreshadowing
 
 | Table | Purpose |
 |-------|---------|
 | `character_relationships` | Character relationships |
-| `character_voiceprints` | Voiceprint samples |
 | `foreshadowing_index` | Foreshadowing registry |
 | `deduction_logs` | Deduction logs |
 
