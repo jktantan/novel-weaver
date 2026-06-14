@@ -8,6 +8,7 @@ package com.novelweaver.service;
  * EN Character profile, snapshot, conflict detection
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novelweaver.model.Chapter;
 import com.novelweaver.model.CharacterProfile;
 import com.novelweaver.model.CharacterSnapshot;
@@ -16,8 +17,11 @@ import com.novelweaver.repository.ChapterRepository;
 import com.novelweaver.repository.CharacterProfileRepository;
 import com.novelweaver.repository.CharacterSnapshotRepository;
 import com.novelweaver.repository.ProjectRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,44 +31,24 @@ import java.util.*;
 @Component
 public class CharacterService {
 
+    private static final Logger log = LoggerFactory.getLogger(CharacterService.class);
+
     private final CharacterProfileRepository profiles;
     private final CharacterSnapshotRepository snapshots;
     private final ChapterRepository chapters;
     private final ProjectRepository projects;
+    private final ObjectMapper mapper;
+    private final Neo4jClient neo4j;
 
     public CharacterService(CharacterProfileRepository profiles, CharacterSnapshotRepository snapshots,
-                            ChapterRepository chapters, ProjectRepository projects) {
+                            ChapterRepository chapters, ProjectRepository projects,
+                            ObjectMapper mapper, Neo4jClient neo4j) {
         this.profiles = profiles;
         this.snapshots = snapshots;
         this.chapters = chapters;
         this.projects = projects;
-    }
-
-    private static String camelToSnakeJson(List<String> items) {
-        // Simple list-of-strings → JSON array string
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) sb.append(", ");
-            sb.append('"').append(items.get(i).replace("\"", "\\\"")).append('"');
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    private static String toJson(Map<String, Object> map) {
-        StringBuilder sb = new StringBuilder("{");
-        int i = 0;
-        for (var entry : map.entrySet()) {
-            if (i > 0) sb.append(", ");
-            sb.append('"').append(entry.getKey()).append("\": ");
-            Object v = entry.getValue();
-            if (v instanceof String s) sb.append('"').append(s.replace("\"", "\\\"")).append('"');
-            else if (v instanceof Number || v instanceof Boolean) sb.append(v);
-            else sb.append('"').append(String.valueOf(v).replace("\"", "\\\"")).append('"');
-            i++;
-        }
-        sb.append("}");
-        return sb.toString();
+        this.mapper = mapper;
+        this.neo4j = neo4j;
     }
 
     /*
@@ -97,9 +81,21 @@ public class CharacterService {
                 });
 
         if (bio != null) cp.setBio(bio);
-        if (traits != null) cp.setTraits(camelToSnakeJson(traits));
+        if (traits != null) {
+            try {
+                cp.setTraits(mapper.writeValueAsString(traits));
+            } catch (Exception e) {
+                cp.setTraits("[]");
+            }
+        }
         if (voiceSeeds != null) cp.setVoiceSeeds(voiceSeeds.toArray(new String[0]));
-        if (voiceMeta != null) cp.setVoiceMeta(toJson(voiceMeta));
+        if (voiceMeta != null) {
+            try {
+                cp.setVoiceMeta(mapper.writeValueAsString(voiceMeta));
+            } catch (Exception e) {
+                cp.setVoiceMeta("{}");
+            }
+        }
         cp.setUpdatedAt(Instant.now());
         profiles.save(cp);
 
@@ -134,13 +130,13 @@ public class CharacterService {
                         s.getPhysicalLocation(),
                         s.getPhysicalStatus(),
                         s.getCorePsychology(),
-                        s.getKeyItems() != null ? List.of(s.getKeyItems()) : List.of(),
+                        s.getKeyItems() != null ? Arrays.asList(s.getKeyItems()) : List.of(),
                         s.getSummary()))
                 .toList();
 
         ProfileInfo profile = new ProfileInfo(
                 cp.getId().toString(), name, cp.getBio(), cp.getVoice(),
-                cp.getVoiceSeeds() != null ? List.of(cp.getVoiceSeeds()) : List.of(),
+                cp.getVoiceSeeds() != null ? Arrays.asList(cp.getVoiceSeeds()) : List.of(),
                 cp.getType());
 
         return new CharacterStatusResult("ok", name, profile, history);
@@ -192,6 +188,23 @@ public class CharacterService {
         if (summary != null) cs.setSummary(summary);
         cs.setUpdatedAt(Instant.now());
         snapshots.save(cs);
+
+        // Neo4j: record character visited location
+        if (location != null && !location.isBlank()) {
+            try {
+                neo4j.query("""
+                                MERGE (c:Character {project_id: $pid, name: $charName})
+                                MERGE (loc:Location {project_id: $pid, name: $locName})
+                                MERGE (c)-[:VISITED]->(loc)
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(name).to("charName")
+                        .bind(location).to("locName")
+                        .run();
+            } catch (Exception e) {
+                log.warn("Neo4j VISITED edge failed for {}/{} -> {}", projectId, name, location, e);
+            }
+        }
 
         return new CharacterSnapshotResult("ok", name, chapterNumber);
     }

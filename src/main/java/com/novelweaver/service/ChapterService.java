@@ -61,7 +61,7 @@ public class ChapterService {
                 .build();
     }
 
-    private static String textTruncate(String text, int maxCodePoints) {
+    static String textTruncate(String text, int maxCodePoints) {
         if (text == null) return "";
         int len = text.codePointCount(0, text.length());
         if (len <= maxCodePoints) return text;
@@ -71,6 +71,96 @@ public class ChapterService {
     // ═══════════════════════════════════════════════
     // 分段
     // ═══════════════════════════════════════════════
+
+    static List<Segment> segment(String content) {
+        List<Segment> result = new ArrayList<>();
+        String[] scenes = content.split("\\r?\\n(?=## )");
+        for (String block : scenes) {
+            String[] lines = block.split("\\r?\\n", 2);
+            String headline = lines[0].replaceAll("^#+\\s*", "").trim();
+            String body = lines.length > 1 ? lines[1] : "";
+
+            int len = body.codePointCount(0, body.length());
+            if (len <= 800) {
+                result.add(new Segment(headline, block, classify(body)));
+            } else {
+                result.addAll(splitChunks(headline, body, len));
+            }
+        }
+        return result;
+    }
+
+    /*
+     * 获取章节 / 取得 / Get
+     *
+     * CN 获取单章正文
+     * JP 単章の本文を取得
+     * EN Get single chapter content
+     */
+    @McpTool(name = "chapter_get", description = "获取章节正文 | CN 获取章节正文 / JP 章の本文を取得 / EN Get chapter content")
+    public ChapterGetResult get(
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "章节号", required = true) int number) {
+        Project proj = projects.findById(UUID.fromString(projectId))
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+        Chapter ch = chapters.findByProjectAndChapterNumber(proj, number).orElse(null);
+        if (ch == null) {
+            return new ChapterGetResult("not_found", null, null, null);
+        }
+        return new ChapterGetResult("ok", ch.getId().toString(), ch.getTitle(), ch.getContent());
+    }
+
+    private static List<Segment> splitChunks(String scene, String body, int totalCodePoints) {
+        List<Segment> chunks = new ArrayList<>();
+        int pos = 0;
+        int seq = 0;
+        int seen = 0;
+        while (pos < body.length()) {
+            int remaining = totalCodePoints - seen;
+            int chunkChars = Math.min(CHUNK_TARGET, remaining);
+            int end = findBreak(body, pos, chunkChars);
+            String chunk = body.substring(pos, end).trim();
+            int chunkCP = chunk.codePointCount(0, chunk.length());
+            chunks.add(new Segment(scene + " [" + (seq + 1) + "]", chunk, classify(chunk)));
+            pos = end;
+            seq++;
+            seen += chunkCP;
+            if (pos >= body.length()) break;
+            int back = overlapBack(body, pos);
+            pos = Math.max(pos, back);
+        }
+        return chunks;
+    }
+
+    private static int findBreak(String text, int start, int targetChars) {
+        int searchEnd = Math.min(text.length(), start + targetChars + 100);
+        if (searchEnd >= text.length()) return text.length();
+        for (int i = start + targetChars - 50; i < searchEnd; i++) {
+            char c = text.charAt(i);
+            if (c == '\n' || c == '。' || c == '？' || c == '！' || c == '」') {
+                return i + 1;
+            }
+        }
+        return Math.min(text.length(), start + targetChars);
+    }
+
+    private static int overlapBack(String text, int pos) {
+        int count = 0;
+        for (int i = pos - 1; i >= 0 && count < OVERLAP_CP; i--) {
+            count += Character.charCount(text.codePointAt(i));
+            if (count >= OVERLAP_CP) return i;
+        }
+        return Math.max(0, pos - OVERLAP_CP);
+    }
+
+    static String classify(String text) {
+        int quotes = 0;
+        for (int i = 0; i < text.length(); i++) {
+            if (text.charAt(i) == '"' || text.charAt(i) == '“' || text.charAt(i) == '”') quotes++;
+        }
+        int total = text.codePointCount(0, text.length());
+        return (quotes > 0 && total > 0 && (double) quotes / total > 0.05) ? "dialogue" : "narrative";
+    }
 
     /*
      * 同步章节 / 同期 / Sync
@@ -89,6 +179,7 @@ public class ChapterService {
             @McpToolParam(description = "阶段", required = false) String phase,
             @McpToolParam(description = "出场角色列表", required = false) List<String> characters,
             @McpToolParam(description = "出场物品列表", required = false) List<String> items,
+            @McpToolParam(description = "出场地点列表", required = false) List<String> locations,
             @McpToolParam(description = "段落向量（pgvector格式字符串，顺序与分段结果一致）", required = false) List<String> embeddings) {
 
         long t0 = System.currentTimeMillis();
@@ -170,6 +261,7 @@ public class ChapterService {
         }
 
         // Neo4j: MERGE chapter + :NEXT 链
+        List<String> neo4jErrors = new ArrayList<>();
         try {
             neo4j.query("""
                             MERGE (ch:Chapter {project_id: $pid, number: $num})
@@ -195,57 +287,67 @@ public class ChapterService {
             }
         } catch (Exception e) {
             log.warn("Neo4j chapter sync failed for chapter {}-{}", projectId, number, e);
+            neo4jErrors.add("chapter: " + e.getMessage());
         }
 
-        // Neo4j: 人物出场关系
+        // Neo4j: 人物出场关系 — 批量 UNWIND
         if (characters != null && !characters.isEmpty()) {
             try {
-                for (String name : characters) {
-                    neo4j.query("""
-                                    MERGE (c:Character {project_id: $pid, name: $name})
-                                    """)
-                            .bind(projectId).to("pid")
-                            .bind(name).to("name")
-                            .run();
-
-                    neo4j.query("""
-                                    MATCH (c:Character {project_id: $pid, name: $name})
-                                    MATCH (ch:Chapter {project_id: $pid, number: $num})
-                                    MERGE (c)-[:APPEARS_IN]->(ch)
-                                    """)
-                            .bind(projectId).to("pid")
-                            .bind(name).to("name")
-                            .bind(number).to("num")
-                            .run();
-                }
+                // 一步：批量创建角色节点 + APPEARS_IN 关系
+                neo4j.query("""
+                                UNWIND $names AS name
+                                MERGE (c:Character {project_id: $pid, name: name})
+                                WITH c
+                                MATCH (ch:Chapter {project_id: $pid, number: $num})
+                                MERGE (c)-[:APPEARS_IN]->(ch)
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(number).to("num")
+                        .bind(characters).to("names")
+                        .run();
             } catch (Exception e) {
                 log.warn("Neo4j character appearance sync failed for chapter {}-{}", projectId, number, e);
+                neo4jErrors.add("characters: " + e.getMessage());
             }
         }
 
-        // Neo4j: 物品出场关系
+        // Neo4j: 物品出场关系 — 批量 UNWIND
         if (items != null && !items.isEmpty()) {
             try {
-                for (String itemName : items) {
-                    neo4j.query("""
-                                    MERGE (it:Item {project_id: $pid, name: $name})
-                                    """)
-                            .bind(projectId).to("pid")
-                            .bind(itemName).to("name")
-                            .run();
-
-                    neo4j.query("""
-                                    MATCH (it:Item {project_id: $pid, name: $name})
-                                    MATCH (ch:Chapter {project_id: $pid, number: $num})
-                                    MERGE (it)-[:APPEARS_IN]->(ch)
-                                    """)
-                            .bind(projectId).to("pid")
-                            .bind(itemName).to("name")
-                            .bind(number).to("num")
-                            .run();
-                }
+                neo4j.query("""
+                                UNWIND $names AS name
+                                MERGE (it:Item {project_id: $pid, name: name})
+                                WITH it
+                                MATCH (ch:Chapter {project_id: $pid, number: $num})
+                                MERGE (it)-[:APPEARS_IN]->(ch)
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(number).to("num")
+                        .bind(items).to("names")
+                        .run();
             } catch (Exception e) {
                 log.warn("Neo4j item appearance sync failed for chapter {}-{}", projectId, number, e);
+                neo4jErrors.add("items: " + e.getMessage());
+            }
+        }
+
+        // Neo4j: 地点出场关系 — 批量 UNWIND
+        if (locations != null && !locations.isEmpty()) {
+            try {
+                neo4j.query("""
+                                UNWIND $names AS name
+                                MERGE (loc:Location {project_id: $pid, name: name})
+                                WITH loc
+                                MATCH (ch:Chapter {project_id: $pid, number: $num})
+                                MERGE (loc)-[:APPEARS_IN]->(ch)
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(number).to("num")
+                        .bind(locations).to("names")
+                        .run();
+            } catch (Exception e) {
+                log.warn("Neo4j location appearance sync failed for chapter {}-{}", projectId, number, e);
+                neo4jErrors.add("locations: " + e.getMessage());
             }
         }
 
@@ -253,27 +355,7 @@ public class ChapterService {
 
         return new ChapterSyncResult(
                 "ok", chapter.getId().toString(), newVer, paraCount, elapsed,
-                meiliOk, null);
-    }
-
-    /*
-     * 获取章节 / 取得 / Get
-     *
-     * CN 获取单章正文
-     * JP 単章の本文を取得
-     * EN Get single chapter content
-     */
-    @McpTool(name = "chapter_get", description = "获取章节正文 | CN 获取章节正文 / JP 章の本文を取得 / EN Get chapter content")
-    public ChapterGetResult get(
-            @McpToolParam(description = "项目ID", required = true) String projectId,
-            @McpToolParam(description = "章节号", required = true) int number) {
-        Project proj = projects.findById(UUID.fromString(projectId))
-                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
-        Chapter ch = chapters.findByProjectAndChapterNumber(proj, number).orElse(null);
-        if (ch == null) {
-            return new ChapterGetResult("not_found", null, null, null);
-        }
-        return new ChapterGetResult("ok", ch.getId().toString(), ch.getTitle(), ch.getContent());
+                meiliOk, neo4jErrors.isEmpty() ? null : String.join("; ", neo4jErrors));
     }
 
     /*
@@ -285,84 +367,22 @@ public class ChapterService {
      */
     @McpTool(name = "chapter_list", description = "列出所有章节 | CN 列出所有章节 / JP 全章を一覧表示 / EN List all chapters")
     public ChapterListResult list(
-            @McpToolParam(description = "项目ID", required = true) String projectId) {
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "返回数量上限（默认50）", required = false) Integer limit,
+            @McpToolParam(description = "偏移量（默认0）", required = false) Integer offset) {
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
         List<Chapter> chs = chapters.findByProjectOrderByChapterNumber(proj);
-        List<ChapterInfo> infos = chs.stream()
+        int off = offset != null ? Math.max(0, offset) : 0;
+        int lim = limit != null ? Math.max(1, limit) : 50;
+        if (off >= chs.size()) {
+            return new ChapterListResult(List.of(), "offset " + off + " >= total " + chs.size());
+        }
+        int to = Math.min(off + lim, chs.size());
+        List<ChapterInfo> infos = chs.subList(off, to).stream()
                 .map(c -> new ChapterInfo(c.getChapterNumber(), c.getTitle(), c.getStatus(), c.getWordCount()))
                 .toList();
-        return new ChapterListResult(infos, null);
-    }
-
-    List<Segment> segment(String content) {
-        List<Segment> result = new ArrayList<>();
-        String[] scenes = content.split("\n(?=## )");
-        for (String block : scenes) {
-            String[] lines = block.split("\n", 2);
-            String headline = lines[0].replaceAll("^#+\\s*", "").trim();
-            String body = lines.length > 1 ? lines[1] : "";
-
-            int len = body.codePointCount(0, body.length());
-            if (len <= 800) {
-                result.add(new Segment(headline, block, classify(body)));
-            } else {
-                result.addAll(splitChunks(headline, body, len));
-            }
-        }
-        return result;
-    }
-
-    private List<Segment> splitChunks(String scene, String body, int totalCodePoints) {
-        List<Segment> chunks = new ArrayList<>();
-        int pos = 0;
-        int seq = 0;
-        int seen = 0;
-        while (pos < body.length()) {
-            int remaining = totalCodePoints - seen;
-            int chunkChars = Math.min(CHUNK_TARGET, remaining);
-            int end = findBreak(body, pos, chunkChars);
-            String chunk = body.substring(pos, end).trim();
-            int chunkCP = chunk.codePointCount(0, chunk.length());
-            chunks.add(new Segment(scene + " [" + (seq + 1) + "]", chunk, classify(chunk)));
-            pos = end;
-            seq++;
-            seen += chunkCP;
-            if (pos >= body.length()) break;
-            int back = overlapBack(body, pos);
-            pos = Math.max(pos, back);
-        }
-        return chunks;
-    }
-
-    private int findBreak(String text, int start, int targetChars) {
-        int searchEnd = Math.min(text.length(), start + targetChars + 100);
-        if (searchEnd >= text.length()) return text.length();
-        for (int i = start + targetChars - 50; i < searchEnd; i++) {
-            char c = text.charAt(i);
-            if (c == '\n' || c == '。' || c == '？' || c == '！' || c == '」') {
-                return i + 1;
-            }
-        }
-        return Math.min(text.length(), start + targetChars);
-    }
-
-    private int overlapBack(String text, int pos) {
-        int count = 0;
-        for (int i = pos - 1; i >= 0 && count < OVERLAP_CP; i--) {
-            count += Character.charCount(text.codePointAt(i));
-            if (count >= OVERLAP_CP) return i;
-        }
-        return Math.max(0, pos - OVERLAP_CP);
-    }
-
-    private String classify(String text) {
-        int quotes = 0;
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == '"' || text.charAt(i) == '“' || text.charAt(i) == '”') quotes++;
-        }
-        int total = text.codePointCount(0, text.length());
-        return (quotes > 0 && total > 0 && (double) quotes / total > 0.05) ? "dialogue" : "narrative";
+        return new ChapterListResult(infos, lim + "/" + chs.size());
     }
 
     record Segment(String scene, String text, String type) {

@@ -29,16 +29,18 @@ import java.util.*;
 public class ItemService {
 
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ItemRepository items;
     private final ProjectRepository projects;
     private final Neo4jClient neo4j;
+    private final ObjectMapper mapper;
 
-    public ItemService(ItemRepository items, ProjectRepository projects, Neo4jClient neo4j) {
+    public ItemService(ItemRepository items, ProjectRepository projects,
+                       Neo4jClient neo4j, ObjectMapper mapper) {
         this.items = items;
         this.projects = projects;
         this.neo4j = neo4j;
+        this.mapper = mapper;
     }
 
 
@@ -79,7 +81,7 @@ public class ItemService {
         item.setOrigin(origin != null ? origin : "");
         item.setSignificance(significance != null ? significance : "");
         try {
-            item.setProperties(properties != null ? MAPPER.writeValueAsString(properties) : "{}");
+            item.setProperties(properties != null ? mapper.writeValueAsString(properties) : "{}");
         } catch (Exception e) {
             item.setProperties("{}");
         }
@@ -187,13 +189,13 @@ public class ItemService {
             List<Map<String, Object>> history;
             String existing = item.getOwnerHistory();
             if (existing != null && !existing.isBlank() && !"[]".equals(existing.trim())) {
-                history = MAPPER.readValue(existing, new TypeReference<List<Map<String, Object>>>() {
+                history = mapper.readValue(existing, new TypeReference<List<Map<String, Object>>>() {
                 });
             } else {
                 history = new ArrayList<>();
             }
             history.add(entry);
-            item.setOwnerHistory(MAPPER.writeValueAsString(history));
+            item.setOwnerHistory(mapper.writeValueAsString(history));
         } catch (Exception e) {
             throw new RuntimeException("Failed to update owner history", e);
         }
@@ -260,7 +262,7 @@ public class ItemService {
         profile.put("significance", item.getSignificance());
         try {
             profile.put("properties", item.getProperties() != null
-                    ? MAPPER.readValue(item.getProperties(), Object.class) : Map.of());
+                    ? mapper.readValue(item.getProperties(), Object.class) : Map.of());
         } catch (Exception e) {
             profile.put("properties", item.getProperties());
         }
@@ -273,7 +275,7 @@ public class ItemService {
         String historyJson = item.getOwnerHistory();
         if (historyJson != null && !historyJson.isBlank() && !"[]".equals(historyJson.trim())) {
             try {
-                history = MAPPER.readValue(historyJson, new TypeReference<List<Map<String, Object>>>() {
+                history = mapper.readValue(historyJson, new TypeReference<List<Map<String, Object>>>() {
                 });
             } catch (Exception e) {
                 log.warn("Failed to parse owner_history for item {}", name, e);

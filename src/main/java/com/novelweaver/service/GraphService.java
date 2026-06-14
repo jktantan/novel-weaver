@@ -55,9 +55,12 @@ public class GraphService {
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
         int d = Math.max(1, Math.min(depth != null ? depth : 2, MAX_DEPTH));
+        if (d < 1 || d > MAX_DEPTH) {
+            throw new IllegalArgumentException("Depth must be between 1 and " + MAX_DEPTH + ", got " + d);
+        }
 
         try {
-            // depth 是 int，安全拼接，不存在 Cypher 注入
+            // depth 范围受 MAX_DEPTH 限制，结合上述校验，formatted 拼接安全
             var edges = neo4j.query("""
                             MATCH (c:Character {project_id: $pid, name: $name})-[r:RELATED_TO*1..%d]-(other:Character)
                             WHERE other.project_id = $pid

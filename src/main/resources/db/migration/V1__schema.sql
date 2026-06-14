@@ -343,6 +343,7 @@ CREATE TABLE canon_sources
     project_id UUID NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
     name       TEXT NOT NULL,
     url        TEXT             DEFAULT '',
+    content TEXT DEFAULT '',
     verified   BOOLEAN          DEFAULT false,
     created_at TIMESTAMPTZ      DEFAULT now(),
     UNIQUE (project_id, name)
@@ -486,6 +487,10 @@ CREATE TABLE timeline_events
     description     TEXT             DEFAULT '',
     date_label      TEXT             DEFAULT '',
     is_canon        BOOLEAN          DEFAULT false,
+    status           VARCHAR(10) DEFAULT 'planned',
+    planned_event_id UUID REFERENCES timeline_events (id),
+    criticality      VARCHAR(12) DEFAULT 'important',
+    time_flexibility VARCHAR(10) DEFAULT 'flexible',
     created_at      TIMESTAMPTZ      DEFAULT now()
 );
 
@@ -493,6 +498,22 @@ COMMENT
 ON TABLE timeline_events IS '时间线事件——按绝对顺序和叙述顺序排列
 JP タイムラインイベント——絶対順序と叙述順序で整列
 EN Timeline events — ordered by absolute and narrative sequence';
+COMMENT
+ON COLUMN timeline_events.status IS '事件状态：planned(计划中)/realized(已实现)/modified(被修改)/skipped(被跳过)
+JP planned(計画中)/realized(実現)/modified(変更)/skipped(スキップ)
+EN Event status: planned/realized/modified/skipped';
+COMMENT
+ON COLUMN timeline_events.planned_event_id IS '关联的计划事件——当本条是计划事件的实现/修改时，指向原始计划
+JP 関連する計画イベント——この行が計画の実現/変更の場合、元の計画を指す
+EN Linked planned event — when this row realizes/modifies a plan, points to the original';
+COMMENT
+ON COLUMN timeline_events.criticality IS '重要性：mandatory(必须发生，跳过会导致故事崩塌)/important(重要但可有替代)/optional(可选)
+JP mandatory(必須)/important(重要)/optional(任意)
+EN Criticality: mandatory/important/optional';
+COMMENT
+ON COLUMN timeline_events.time_flexibility IS '时间灵活性：fixed(必须在预定位置)/flexible(可提前或推迟)/anytime(在哪发生都行)
+JP fixed(固定)/flexible(柔軟)/anytime(任意)
+EN Time flexibility: fixed/flexible/anytime';
 COMMENT
 ON COLUMN timeline_events.absolute_order IS '实际发生顺序
 JP 実際の発生順序

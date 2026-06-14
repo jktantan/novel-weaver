@@ -46,6 +46,14 @@ public class TimelineEvent {
     private String dateLabel;
     @Column
     private Boolean isCanon;
+    @Column(length = 10)
+    private String status;
+    @Column(name = "planned_event_id")
+    private UUID plannedEventId;
+    @Column(length = 12)
+    private String criticality;
+    @Column(name = "time_flexibility", length = 10)
+    private String timeFlexibility;
     @Column(updatable = false)
     private Instant createdAt;
 }

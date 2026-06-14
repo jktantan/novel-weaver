@@ -34,6 +34,8 @@ public class CanonSource {
     private String name;
     @Column(columnDefinition = "text")
     private String url;
+    @Column(columnDefinition = "text")
+    private String content;
     @Column
     private Boolean verified;
     @Column(updatable = false)

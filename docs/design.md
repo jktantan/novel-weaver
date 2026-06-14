@@ -169,15 +169,18 @@ What it doesn't do:
 │  │        (Spring AI @McpTool 自动注册)  │           │
 │  │                                       │           │
 │  │  Service 层（纯数据，无 LLM）          │           │
-│  │  ├── ProjectService    (2 tools)     │           │
+│  │  ├── ProjectService    (6 tools)     │           │
 │  │  ├── ChapterService    (3 tools)     │           │
-│  │  ├── CharacterService  (3 tools)     │           │
+│  │  ├── CharacterService  (4 tools)     │           │
 │  │  ├── RAGService        (3 tools)     │           │
 │  │  ├── GraphService      (2 tools)     │           │
 │  │  ├── DeductionService  (4 tools)     │           │
-│  │  ├── CanonService      (3 tools)     │           │
-│  │  ├── TimelineService   (3 tools)     │           │
-│  │  └── LocationService   (3 tools)     │           │
+│  │  ├── CanonService      (7 tools)     │           │
+│  │  ├── TimelineService   (6 tools)     │           │
+│  │  ├── ItemService       (3 tools)
+│  │  ├── UniverseService   (3 tools)
+│  │  ├── GrammarService    (1 tool)
+│  │  ├── LocationService   (3 tools)     │           │
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
@@ -221,15 +224,18 @@ What it doesn't do:
 │  │        (Spring AI @McpTool 自動登録)  │           │
 │  │                                       │           │
 │  │  Service 層（純データ、LLM なし）      │           │
-│  │  ├── ProjectService    (2 tools)     │           │
+│  │  ├── ProjectService    (6 tools)     │           │
 │  │  ├── ChapterService    (3 tools)     │           │
-│  │  ├── CharacterService  (3 tools)     │           │
+│  │  ├── CharacterService  (4 tools)     │           │
 │  │  ├── RAGService        (3 tools)     │           │
 │  │  ├── GraphService      (2 tools)     │           │
 │  │  ├── DeductionService  (4 tools)     │           │
-│  │  ├── CanonService      (3 tools)     │           │
-│  │  ├── TimelineService   (3 tools)     │           │
-│  │  └── LocationService   (3 tools)     │           │
+│  │  ├── CanonService      (7 tools)     │           │
+│  │  ├── TimelineService   (6 tools)     │           │
+│  │  ├── ItemService       (3 tools)
+│  │  ├── UniverseService   (3 tools)
+│  │  ├── GrammarService    (1 tool)
+│  │  ├── LocationService   (3 tools)     │           │
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
@@ -273,15 +279,18 @@ What it doesn't do:
 │  │        (Spring AI @McpTool auto-reg) │           │
 │  │                                       │           │
 │  │  Service layer (pure data, no LLM)   │           │
-│  │  ├── ProjectService    (2 tools)     │           │
+│  │  ├── ProjectService    (6 tools)     │           │
 │  │  ├── ChapterService    (3 tools)     │           │
-│  │  ├── CharacterService  (3 tools)     │           │
+│  │  ├── CharacterService  (4 tools)     │           │
 │  │  ├── RAGService        (3 tools)     │           │
 │  │  ├── GraphService      (2 tools)     │           │
 │  │  ├── DeductionService  (4 tools)     │           │
-│  │  ├── CanonService      (3 tools)     │           │
-│  │  ├── TimelineService   (3 tools)     │           │
-│  │  └── LocationService   (3 tools)     │           │
+│  │  ├── CanonService      (7 tools)     │           │
+│  │  ├── TimelineService   (6 tools)     │           │
+│  │  ├── ItemService       (3 tools)
+│  │  ├── UniverseService   (3 tools)
+│  │  ├── GrammarService    (1 tool)
+│  │  ├── LocationService   (3 tools)     │           │
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
@@ -866,18 +875,20 @@ curl http://localhost:8883/health
 
 **CN**
 
-| 分类       | 工具                                                                                                            | 用途                |
-|----------|---------------------------------------------------------------------------------------------------------------|-------------------|
-| **项目管理** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import` | 项目 CRUD、重置、导入导出   |
-| **章节**   | `chapter_sync` / `chapter_get` / `chapter_list`                                                               | 同步/获取/列出章节        |
-| **人物**   | `character_save` / `character_status` / `character_snapshot`                                                  | 保存画像、查状态、记录快照     |
-| **地点**   | `location_register` / `location_update` / `location_status`                                                   | 注册/更新/查询地点        |
-| **物品**   | `item_register` / `item_update` / `item_query`                                                                | 注册/更新/查询物品详情      |
-| **搜索**   | `rag_search` / `semantic_search` / `fuzzy_search`                                                             | 语义搜索+向量搜索+模糊搜索    |
-| **图谱**   | `graph_query` / `graph_path`                                                                                  | 查询关系图、路径          |
-| **时间线**  | `timeline_create` / `timeline_event_add` / `timeline_check`                                                   | 创建时间线、添加事件、检查矛盾   |
-| **推演**   | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing`                             | 行为推演、大纲推演、验证、伏笔登记 |
-| **正典**   | `canon_import` / `canon_search` / `canon_verify`                                                              | 正典导入/搜索/审核        |
+| 分类       | 工具                                                                                                                                           | 用途                       |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------|
+| **项目管理** | `project_init` / `project_archive` / `project_delete` / `service_reset` / `project_export` / `project_import`                                | 项目 CRUD、重置、导入导出          |
+| **章节**   | `chapter_sync` / `chapter_get` / `chapter_list`                                                                                              | 同步/获取/列出章节               |
+| **人物**   | `character_save` / `character_status` / `character_snapshot` / `character_snapshot_check`                                                    | 保存画像、查状态、记录快照、检测影响       |
+| **地点**   | `location_register` / `location_update` / `location_status`                                                                                  | 注册/更新/查询地点               |
+| **物品**   | `item_register` / `item_update` / `item_query`                                                                                               | 注册/更新/查询物品详情             |
+| **搜索**   | `rag_search` / `semantic_search` / `fuzzy_search`                                                                                            | 语义搜索+向量搜索+模糊搜索           |
+| **图谱**   | `graph_query` / `graph_path`                                                                                                                 | 查询关系图、路径                 |
+| **时间线**  | `timeline_create` / `timeline_event_add` / `timeline_event_update` / `timeline_check` / `timeline_link_create` / `timeline_link_query`       | 创建时间线、添加/更新事件、检查矛盾、关联时间线 |
+| **推演**   | `deduce_behavior` / `deduce_outline` / `deduce_verify` / `register_foreshadowing`                                                            | 行为推演、大纲推演、验证、伏笔登记        |
+| **正典**   | `canon_import` / `canon_character_add` / `canon_event_add` / `canon_relationship_add` / `canon_search` / `canon_verify` / `canon_status_set` | 正典导入、逐条录入、搜索、审核、走向追踪     |
+| **宇宙**   | `universe_create` / `universe_list` / `universe_link`                                                                                        | 创建、列出、关联宇宙               |
+| **语法检查** | `grammar_check`                                                                                                                              | LanguageTool 语法/错别字检查    |
 
 **JP**
 

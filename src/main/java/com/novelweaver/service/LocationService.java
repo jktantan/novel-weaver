@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +29,18 @@ import java.util.*;
 public class LocationService {
 
     private static final Logger log = LoggerFactory.getLogger(LocationService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final LocationRepository locations;
     private final ProjectRepository projects;
+    private final Neo4jClient neo4j;
+    private final ObjectMapper mapper;
 
-    public LocationService(LocationRepository locations, ProjectRepository projects) {
+    public LocationService(LocationRepository locations, ProjectRepository projects,
+                           Neo4jClient neo4j, ObjectMapper mapper) {
         this.locations = locations;
         this.projects = projects;
+        this.neo4j = neo4j;
+        this.mapper = mapper;
     }
 
 
@@ -82,6 +87,21 @@ public class LocationService {
         loc.setUpdatedAt(Instant.now());
         locations.save(loc);
 
+        // Neo4j: create :Location node
+        try {
+            neo4j.query("""
+                            MERGE (loc:Location {project_id: $pid, name: $name})
+                            SET loc.locationType = $type, loc.region = $region
+                            """)
+                    .bind(projectId).to("pid")
+                    .bind(name).to("name")
+                    .bind(locationType != null ? locationType : "").to("type")
+                    .bind(region != null ? region : "").to("region")
+                    .run();
+        } catch (Exception e) {
+            log.warn("Neo4j location node creation failed for {}/{}", projectId, name, e);
+        }
+
         return new LocationRegisterResult("ok", loc.getId().toString(), name);
     }
 
@@ -123,11 +143,11 @@ public class LocationService {
             List<Map<String, Object>> logList = new ArrayList<>();
             String existing = loc.getChangeLog();
             if (existing != null && !existing.isBlank() && !"[]".equals(existing.trim())) {
-                logList = MAPPER.readValue(existing, new TypeReference<List<Map<String, Object>>>() {
+                logList = mapper.readValue(existing, new TypeReference<List<Map<String, Object>>>() {
                 });
             }
             logList.add(entry);
-            loc.setChangeLog(MAPPER.writeValueAsString(logList));
+            loc.setChangeLog(mapper.writeValueAsString(logList));
         } catch (Exception e) {
             throw new RuntimeException("Failed to update change log", e);
         }
@@ -135,6 +155,21 @@ public class LocationService {
         loc.setCurrentStatus(newStatus);
         loc.setUpdatedAt(Instant.now());
         locations.save(loc);
+
+        // Neo4j: link location to the triggering chapter
+        try {
+            neo4j.query("""
+                            MATCH (loc:Location {project_id: $pid, name: $locName})
+                            MATCH (ch:Chapter {project_id: $pid, number: $chNum})
+                            MERGE (loc)-[:APPEARS_IN]->(ch)
+                            """)
+                    .bind(projectId).to("pid")
+                    .bind(name).to("locName")
+                    .bind(chapter).to("chNum")
+                    .run();
+        } catch (Exception e) {
+            log.warn("Neo4j location APPEARS_IN failed for {}/{} chapter {}", projectId, name, chapter, e);
+        }
 
         return new LocationUpdateResult("ok", name, chapter, change, newStatus);
     }
@@ -172,7 +207,7 @@ public class LocationService {
         String changeLogJson = loc.getChangeLog();
         if (changeLogJson != null && !changeLogJson.isBlank() && !"[]".equals(changeLogJson.trim())) {
             try {
-                history = MAPPER.readValue(changeLogJson, new TypeReference<List<Map<String, Object>>>() {
+                history = mapper.readValue(changeLogJson, new TypeReference<List<Map<String, Object>>>() {
                 });
             } catch (Exception e) {
                 log.warn("Failed to parse change_log for location {}", name, e);

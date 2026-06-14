@@ -8,12 +8,12 @@ package com.novelweaver.service;
  * EN Vector search, fuzzy search, semantic retrieval
  */
 
-import com.novelweaver.model.Chapter;
 import com.novelweaver.model.ChapterParagraph;
-import com.novelweaver.model.Project;
 import com.novelweaver.repository.ChapterParagraphRepository;
 import com.novelweaver.repository.ChapterRepository;
 import com.novelweaver.repository.ProjectRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -35,6 +35,8 @@ public class RAGService {
     private final ChapterRepository chapters;
     private final ProjectRepository projects;
     private final WebClient meiliClient;
+    @PersistenceContext
+    private EntityManager em;
 
     public RAGService(ChapterParagraphRepository paragraphs, ChapterRepository chapters,
                       ProjectRepository projects, WebClient.Builder wcb,
@@ -52,8 +54,7 @@ public class RAGService {
         if (text == null) return "";
         int len = text.codePointCount(0, text.length());
         if (len <= maxCodePoints) return text;
-        int safeLen = text.offsetByCodePoints(0, maxCodePoints * 3 / 2);
-        return text.substring(0, Math.min(text.length(), safeLen)) + "…";
+        return text.substring(0, text.offsetByCodePoints(0, maxCodePoints)) + "…";
     }
 
     /*
@@ -176,19 +177,26 @@ public class RAGService {
     }
 
     private List<FuzzyHit> fuzzyIlike(String projectId, String keyword, int limit) {
-        Project proj = projects.findById(UUID.fromString(projectId)).orElse(null);
-        if (proj == null) return List.of();
-
-        List<Chapter> all = chapters.findByProjectOrderByChapterNumber(proj);
+        UUID pid = UUID.fromString(projectId);
+        String likePattern = "%" + keyword + "%";
+        List<Object[]> rows = em.createNativeQuery(
+                        "SELECT title, chapter_number, content, phase FROM chapters " +
+                                "WHERE project_id = ?1 AND content ILIKE ?2 " +
+                                "ORDER BY chapter_number LIMIT ?3")
+                .setParameter(1, pid)
+                .setParameter(2, likePattern)
+                .setParameter(3, limit)
+                .getResultList();
         List<FuzzyHit> result = new ArrayList<>();
         Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE);
-        for (Chapter ch : all) {
-            if (ch.getContent() != null && ch.getContent().contains(keyword)) {
-                String snip = textSnippet(ch.getContent(), 200);
-                snip = pattern.matcher(snip).replaceAll("**$0**");
-                result.add(new FuzzyHit(ch.getTitle(), ch.getChapterNumber(), snip, ch.getPhase()));
-                if (result.size() >= limit) break;
-            }
+        for (Object[] row : rows) {
+            String title = (String) row[0];
+            int chNum = row[1] instanceof Number ? ((Number) row[1]).intValue() : 0;
+            String content = (String) row[2];
+            String phase = (String) row[3];
+            String snip = textSnippet(content, 200);
+            snip = pattern.matcher(snip).replaceAll("**$0**");
+            result.add(new FuzzyHit(title, chNum, snip, phase));
         }
         return result;
     }

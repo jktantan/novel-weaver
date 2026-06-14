@@ -33,7 +33,6 @@ import java.util.*;
 public class ProjectService {
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     // ── Tables with direct project_id ──
     private static final String[] PG_DIRECT_TABLES = {
             "character_voiceprints",
@@ -66,6 +65,7 @@ public class ProjectService {
     private final UniverseService universeService;
     private final Neo4jClient neo4j;
     private final WebClient meiliClient;
+    private final ObjectMapper mapper;
     @PersistenceContext
     private EntityManager em;
 
@@ -73,7 +73,8 @@ public class ProjectService {
                           UniverseService universeService, Neo4jClient neo4j,
                           WebClient.Builder wcb,
                           @Value("${novel.meili.url}") String meiliUrl,
-                          @Value("${novel.meili.master-key}") String meiliKey) {
+                          @Value("${novel.meili.master-key}") String meiliKey,
+                          ObjectMapper mapper) {
         this.projects = projects;
         this.universes = universes;
         this.universeService = universeService;
@@ -81,6 +82,7 @@ public class ProjectService {
         this.meiliClient = wcb.baseUrl(meiliUrl)
                 .defaultHeader("Authorization", "Bearer " + meiliKey)
                 .build();
+        this.mapper = mapper;
     }
 
 
@@ -106,7 +108,7 @@ public class ProjectService {
         p.setUpdatedAt(Instant.now());
         if (meta != null) {
             try {
-                p.setMeta(MAPPER.writeValueAsString(meta));
+                p.setMeta(mapper.writeValueAsString(meta));
             } catch (Exception e) {
                 log.warn("Failed to serialize meta JSON, storing as toString()", e);
                 p.setMeta(meta.toString());
@@ -212,13 +214,27 @@ public class ProjectService {
                 .setParameter(1, pid)
                 .executeUpdate();
 
-        // 3. Neo4j — 删除该项目下的全部数据
+        // 3. Neo4j — 删除该项目下的全部节点和关系
         try {
-            // Chapter 节点和 Project 节点之间没有直接关系，分两步删
             neo4j.query("MATCH (ch:Chapter {project_id: $pid}) DETACH DELETE ch")
                     .bind(projectId).to("pid")
                     .run();
             neo4j.query("MATCH (it:Item {project_id: $pid}) DETACH DELETE it")
+                    .bind(projectId).to("pid")
+                    .run();
+            neo4j.query("MATCH (c:Character {project_id: $pid}) DETACH DELETE c")
+                    .bind(projectId).to("pid")
+                    .run();
+            neo4j.query("MATCH (loc:Location {project_id: $pid}) DETACH DELETE loc")
+                    .bind(projectId).to("pid")
+                    .run();
+            neo4j.query("MATCH (te:TimelineEvent {project_id: $pid}) DETACH DELETE te")
+                    .bind(projectId).to("pid")
+                    .run();
+            neo4j.query("MATCH (t:Timeline {project_id: $pid}) DETACH DELETE t")
+                    .bind(projectId).to("pid")
+                    .run();
+            neo4j.query("MATCH (u:Universe {project_id: $pid}) DETACH DELETE u")
                     .bind(projectId).to("pid")
                     .run();
             neo4j.query("MATCH (pr:Project {project_id: $pid}) DETACH DELETE pr")
@@ -232,7 +248,7 @@ public class ProjectService {
         try {
             meiliClient.post()
                     .uri("/indexes/novel_chapters/documents/delete-by-filter")
-                    .bodyValue(Map.of("filter", List.of("project_id = '" + projectId + "'")))
+                    .bodyValue(Map.of("filter", List.of("project_id = '" + pid + "'")))
                     .retrieve()
                     .bodyToMono(String.class)
                     .block(java.time.Duration.ofSeconds(5));
@@ -418,7 +434,8 @@ public class ProjectService {
 
         // 6. 时间线事件
         List<Map<String, Object>> tlEvents = em.createNativeQuery(
-                        "SELECT te.name, te.absolute_order, te.narrative_order, te.description, te.date_label, te.is_canon, tl.name as tl_name " +
+                        "SELECT te.name, te.absolute_order, te.narrative_order, te.description, te.date_label, te.is_canon, tl.name as tl_name, " +
+                                "te.status, te.criticality, te.time_flexibility " +
                                 "FROM timeline_events te JOIN timelines tl ON te.timeline_id = tl.id " +
                                 "WHERE te.project_id = ?1 ORDER BY tl.name, te.absolute_order")
                 .setParameter(1, pid)
@@ -433,6 +450,9 @@ public class ProjectService {
                     m.put("date_label", r[4]);
                     m.put("is_canon", r[5]);
                     m.put("timeline", r[6]);
+                    m.put("status", r[7]);
+                    m.put("criticality", r[8]);
+                    m.put("time_flexibility", r[9]);
                     return m;
                 }).toList();
         data.put("timeline_events", tlEvents);
@@ -533,7 +553,7 @@ public class ProjectService {
 
         String json;
         try {
-            json = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+            json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize export data", e);
         }
@@ -563,7 +583,7 @@ public class ProjectService {
 
         Map<String, Object> data;
         try {
-            data = MAPPER.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+            data = mapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
             });
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON data: " + e.getMessage());
@@ -662,8 +682,9 @@ public class ProjectService {
             if (tlRows.isEmpty()) continue;
             Object tlId = tlRows.get(0);
             em.createNativeQuery(
-                            "INSERT INTO timeline_events (id, project_id, timeline_id, name, date_label, absolute_order, narrative_order, description, is_canon, created_at) " +
-                                    "VALUES (gen_random_uuid(), :p1, :p2::uuid, :p3, :p4, :p5, :p6, :p7, :p8, now()) " +
+                            "INSERT INTO timeline_events (id, project_id, timeline_id, name, date_label, absolute_order, narrative_order, description, is_canon, status, criticality, time_flexibility, created_at) " +
+                                    "VALUES (gen_random_uuid(), :p1, :p2::uuid, :p3, :p4, :p5, :p6, :p7, :p8, " +
+                                    "COALESCE(:p9, 'planned'), COALESCE(:p10, 'important'), COALESCE(:p11, 'flexible'), now()) " +
                                     "ON CONFLICT DO NOTHING")
                     .setParameter("p1", pid)
                     .setParameter("p2", tlId)
@@ -673,6 +694,9 @@ public class ProjectService {
                     .setParameter("p6", e.get("narrative_order"))
                     .setParameter("p7", e.get("description"))
                     .setParameter("p8", e.get("is_canon"))
+                    .setParameter("p9", e.get("status"))
+                    .setParameter("p10", e.get("criticality"))
+                    .setParameter("p11", e.get("time_flexibility"))
                     .executeUpdate();
             te++;
         }
@@ -797,12 +821,128 @@ public class ProjectService {
                     .executeUpdate();
         }
 
-        // 9. Neo4j — 更新项目节点
+        // 9. Neo4j — 重建图节点和基础关系
+        int neoNodes = 0;
         try {
+            // 9a. 章节节点 + :NEXT 链
+            for (Map<String, Object> c : chapters) {
+                Number chNum = (Number) c.get("number");
+                if (chNum == null) continue;
+                neo4j.query("""
+                                MERGE (ch:Chapter {project_id: $pid, number: $num})
+                                SET ch.title = $title, ch.phase = $phase, ch.status = $status
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(chNum.intValue()).to("num")
+                        .bind(c.getOrDefault("title", "")).to("title")
+                        .bind(c.getOrDefault("phase", "")).to("phase")
+                        .bind(c.getOrDefault("status", "draft")).to("status")
+                        .run();
+                neoNodes++;
+            }
+            // 章节 :NEXT 链
+            for (int i = 0; i < chapters.size() - 1; i++) {
+                Number cur = (Number) chapters.get(i).get("number");
+                Number nxt = (Number) chapters.get(i + 1).get("number");
+                if (cur == null || nxt == null) continue;
+                neo4j.query("""
+                                MATCH (c:Chapter {project_id: $pid, number: $cur})
+                                MATCH (n:Chapter {project_id: $pid, number: $nxt})
+                                MERGE (c)-[:NEXT]->(n)
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(cur.intValue()).to("cur")
+                        .bind(nxt.intValue()).to("nxt")
+                        .run();
+            }
+
+            // 9b. 人物节点
+            for (Map<String, Object> c : characters) {
+                String chName = (String) c.get("name");
+                if (chName == null || chName.isBlank()) continue;
+                neo4j.query("MERGE (:Character {project_id: $pid, name: $name})")
+                        .bind(projectId).to("pid")
+                        .bind(chName).to("name")
+                        .run();
+                neoNodes++;
+            }
+
+            // 9c. 物品节点 + 归属关系
+            for (Map<String, Object> im : itemListData) {
+                String itemName = (String) im.get("name");
+                if (itemName == null) continue;
+                neo4j.query("""
+                                MERGE (it:Item {project_id: $pid, name: $name})
+                                SET it.itemType = $type, it.significance = $sig
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(itemName).to("name")
+                        .bind(im.getOrDefault("item_type", "")).to("type")
+                        .bind(im.getOrDefault("significance", "")).to("sig")
+                        .run();
+                neoNodes++;
+
+                String holder = (String) im.get("current_holder");
+                if (holder != null && !holder.isBlank()) {
+                    neo4j.query("""
+                                    MATCH (it:Item {project_id: $pid, name: $iname})
+                                    MERGE (c:Character {project_id: $pid, name: $holder})
+                                    MERGE (c)-[:OWNS]->(it)
+                                    """)
+                            .bind(projectId).to("pid")
+                            .bind(itemName).to("iname")
+                            .bind(holder).to("holder")
+                            .run();
+                }
+                String locStr = (String) im.get("current_location");
+                if (locStr != null && !locStr.isBlank()) {
+                    neo4j.query("""
+                                    MATCH (it:Item {project_id: $pid, name: $iname})
+                                    MERGE (loc:Location {project_id: $pid, name: $locStr})
+                                    MERGE (loc)-[:CONTAINS]->(it)
+                                    """)
+                            .bind(projectId).to("pid")
+                            .bind(itemName).to("iname")
+                            .bind(locStr).to("locStr")
+                            .run();
+                }
+            }
+
+            // 9d. 地点节点
+            for (Map<String, Object> l : locs) {
+                String locName = (String) l.get("name");
+                if (locName == null) continue;
+                neo4j.query("""
+                                MERGE (loc:Location {project_id: $pid, name: $name})
+                                SET loc.locationType = $type, loc.region = $region
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(locName).to("name")
+                        .bind(l.getOrDefault("location_type", "")).to("type")
+                        .bind(l.getOrDefault("region", "")).to("region")
+                        .run();
+                neoNodes++;
+            }
+
+            // 9e. 时间线节点
+            for (Map<String, Object> t : timelines) {
+                String tlName = (String) t.get("name");
+                if (tlName == null) continue;
+                neo4j.query("""
+                                MERGE (tl:Timeline {project_id: $pid, name: $name})
+                                SET tl.type = $type
+                                """)
+                        .bind(projectId).to("pid")
+                        .bind(tlName).to("name")
+                        .bind(t.getOrDefault("type", "main")).to("type")
+                        .run();
+                neoNodes++;
+            }
+
             neo4j.query("MERGE (pr:Project {project_id: $pid}) SET pr.updatedAt = datetime()")
                     .bind(projectId).to("pid").run();
         } catch (Exception ex) {
-            log.warn("Neo4j import update failed for project {}", projectId, ex);
+            log.warn("Neo4j import graph rebuild partially failed for project {}: {}", projectId, ex.getMessage());
         }
 
         return new ProjectImportResult(projectId, "ok", ch, cp, fs, tl, te, lc, it);
@@ -813,7 +953,7 @@ public class ProjectService {
     private Map<String, Object> safeParseJson(String json) {
         if (json == null || json.isBlank()) return null;
         try {
-            return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {
+            return mapper.readValue(json, new TypeReference<Map<String, Object>>() {
             });
         } catch (Exception e) {
             return null;
@@ -823,7 +963,7 @@ public class ProjectService {
     private void tryParseJsonToField(Map<String, Object> target, String key, String json) {
         if (json == null || json.isBlank()) return;
         try {
-            target.put(key, MAPPER.readValue(json, Object.class));
+            target.put(key, mapper.readValue(json, Object.class));
         } catch (Exception e) {
             target.put(key, json);
         }
@@ -832,7 +972,7 @@ public class ProjectService {
     private String safeToJsonString(Object obj) {
         if (obj == null) return null;
         try {
-            return MAPPER.writeValueAsString(obj);
+            return mapper.writeValueAsString(obj);
         } catch (Exception e) {
             return obj.toString();
         }

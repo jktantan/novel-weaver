@@ -1,6 +1,6 @@
 # Novel Weaver Gateway
 
-Spring Boot 4.x MCP Gateway · 33 tools · PostgreSQL + pgvector + Neo4j + Meilisearch + LanguageTool
+Spring Boot 4.x MCP Gateway · **45 tools** · PostgreSQL + pgvector + Neo4j + Meilisearch + LanguageTool
 
 ---
 
@@ -25,7 +25,7 @@ docker compose up -d --build
 
 # 4. 验证
 curl http://localhost:8883/health
-# → ok
+# → {"status":"UP","postgresql":"UP","neo4j":"UP"}
 
 # 5. 列出所有工具
 curl -s -X POST http://localhost:8883/mcp \
@@ -44,7 +44,7 @@ curl -s -X POST http://localhost:8883/mcp \
 
 配置完成后，告诉 AI：**"初始化项目"**
 
-### 33 个 MCP 工具
+### 45 个 MCP 工具
 
 ```
 项目管理:    project_init / project_archive / project_delete / service_reset
@@ -52,15 +52,19 @@ curl -s -X POST http://localhost:8883/mcp \
 章节:        chapter_sync / chapter_list / chapter_get
 角色:        character_save / character_status / character_snapshot
             character_snapshot_check
+物品:        item_register / item_update / item_query
 地点:        location_register / location_update / location_status
 世界:        universe_create / universe_list / universe_link
 搜索:        fuzzy_search / rag_search / semantic_search
 关系图谱:    graph_query / graph_path
-时间线:      timeline_create / timeline_event_add / timeline_check
-            timeline_link_create / timeline_link_query
-正典:        canon_import / canon_search / canon_verify / canon_status_set
+时间线:      timeline_create / timeline_event_add / timeline_event_update
+            timeline_check / timeline_link_create / timeline_link_query
+正典:        canon_import / canon_character_add / canon_event_add
+            canon_relationship_add / canon_search / canon_verify
+            canon_status_set
 伏笔:        register_foreshadowing
 推演:        deduce_outline / deduce_behavior / deduce_verify
+语法检查:    grammar_check
 ```
 
 ### 目录结构

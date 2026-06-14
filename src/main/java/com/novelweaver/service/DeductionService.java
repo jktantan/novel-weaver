@@ -208,7 +208,7 @@ public class DeductionService {
                         s.getPhysicalLocation(),
                         s.getPhysicalStatus(),
                         s.getCorePsychology(),
-                        s.getKeyItems() != null ? List.of(s.getKeyItems()) : List.of()))
+                        s.getKeyItems() != null ? Arrays.asList(s.getKeyItems()) : List.of()))
                 .orElse(null);
 
         List<RelInfo> relations = outbound.stream()
@@ -218,7 +218,7 @@ public class DeductionService {
         VoiceInfo voice = null;
         if (cp.getVoice() != null || cp.getVoiceMeta() != null || cp.getVoiceSeeds() != null) {
             voice = new VoiceInfo(cp.getVoice(),
-                    cp.getVoiceSeeds() != null ? List.of(cp.getVoiceSeeds()) : List.of(),
+                    cp.getVoiceSeeds() != null ? Arrays.asList(cp.getVoiceSeeds()) : List.of(),
                     cp.getVoiceMeta());
         }
 

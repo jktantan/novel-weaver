@@ -69,6 +69,7 @@ public class CanonService {
 
         src.setProject(proj);
         src.setName(sourceName);
+        src.setContent(text);
         if (existing.isEmpty()) {
             src.setUrl(null);
             src.setVerified(false);
@@ -77,7 +78,7 @@ public class CanonService {
         sources.save(src);
 
         return new CanonImportResult("ok", src.getId().toString(), sourceName,
-                text.codePointCount(0, text.length()) + " 字已接收。结构化解析待后续实现。");
+                text.codePointCount(0, text.length()) + " 字已保存。使用 canon_character_add/canon_event_add/canon_relationship_add 逐条录入结构化数据。");
     }
 
 
@@ -215,6 +216,125 @@ public class CanonService {
 
     // ── result records ──
 
+    /*
+     * 添加正典人物 / 追加 / Add character
+     *
+     * CN 逐条添加正典人物（由 AI 端结构化提取后写入）
+     * JP 正典キャラクターを個別追加（AI側で構造化抽出後に書き込み）
+     * EN Add canon character one by one (written after AI-side structured extraction)
+     */
+    @McpTool(name = "canon_character_add", description = "添加正典人物——逐条录入正典角色信息 | CN 添加正典人物 / JP 正典キャラクター追加 / EN Add canon character")
+    @Transactional
+    public CanonCharacterAddResult addCharacter(
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "角色名", required = true) String name,
+            @McpToolParam(description = "别名列表", required = false) List<String> aliases,
+            @McpToolParam(description = "简介/背景", required = false) String bio,
+            @McpToolParam(description = "来源ID（正典来源，可空）", required = false) String sourceId) {
+
+        Project proj = projects.findById(UUID.fromString(projectId))
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+        CanonSource src = null;
+        if (sourceId != null && !sourceId.isBlank()) {
+            src = sources.findById(UUID.fromString(sourceId)).orElse(null);
+        }
+
+        CanonCharacter ch = new CanonCharacter();
+        ch.setProject(proj);
+        ch.setSource(src);
+        ch.setName(name);
+        ch.setAliases(aliases != null ? aliases.toArray(new String[0]) : new String[0]);
+        ch.setBio(bio);
+        ch.setVerified(false);
+        ch.setCreatedAt(Instant.now());
+        canonChars.save(ch);
+
+        return new CanonCharacterAddResult("ok", ch.getId().toString(), name);
+    }
+
+    /*
+     * 添加正典事件 / 追加 / Add event
+     *
+     * CN 逐条添加正典事件
+     * JP 正典イベントを個別追加
+     * EN Add canon event one by one
+     */
+    @McpTool(name = "canon_event_add", description = "添加正典事件——逐条录入正典事件信息 | CN 添加正典事件 / JP 正典イベント追加 / EN Add canon event")
+    @Transactional
+    public CanonEventAddResult addEvent(
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "事件名", required = true) String name,
+            @McpToolParam(description = "时间线位置（早期/中期/晚期/序章等）", required = false) String timelinePos,
+            @McpToolParam(description = "日期标签（如 '星历元年'）", required = false) String dateLabel,
+            @McpToolParam(description = "正典层级（核心/重要/次要）", required = false) String canonLevel,
+            @McpToolParam(description = "描述", required = false) String description,
+            @McpToolParam(description = "来源ID（可空）", required = false) String sourceId) {
+
+        Project proj = projects.findById(UUID.fromString(projectId))
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+        CanonSource src = null;
+        if (sourceId != null && !sourceId.isBlank()) {
+            src = sources.findById(UUID.fromString(sourceId)).orElse(null);
+        }
+
+        CanonEvent ev = new CanonEvent();
+        ev.setProject(proj);
+        ev.setSource(src);
+        ev.setName(name);
+        ev.setTimelinePos(timelinePos);
+        ev.setDateLabel(dateLabel);
+        ev.setCanonLevel(canonLevel);
+        ev.setDescription(description);
+        ev.setVerified(false);
+        ev.setCreatedAt(Instant.now());
+        canonEvents.save(ev);
+
+        return new CanonEventAddResult("ok", ev.getId().toString(), name);
+    }
+
+    /*
+     * 添加正典关系 / 追加 / Add relationship
+     *
+     * CN 逐条添加正典人物关系
+     * JP 正典人物関係を個別追加
+     * EN Add canon relationship one by one
+     */
+    @McpTool(name = "canon_relationship_add", description = "添加正典人物关系——逐条录入原作中的人物关系 | CN 添加正典关系 / JP 正典関係追加 / EN Add canon relationship")
+    @Transactional
+    public CanonRelationshipAddResult addRelationship(
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "起始角色", required = true) String fromChar,
+            @McpToolParam(description = "目标角色", required = true) String toChar,
+            @McpToolParam(description = "关系类型（同僚/师徒/敌对/恋人/家人等）", required = true) String relType,
+            @McpToolParam(description = "备注", required = false) String note,
+            @McpToolParam(description = "来源ID（可空）", required = false) String sourceId) {
+
+        Project proj = projects.findById(UUID.fromString(projectId))
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+        CanonSource src = null;
+        if (sourceId != null && !sourceId.isBlank()) {
+            src = sources.findById(UUID.fromString(sourceId)).orElse(null);
+        }
+
+        CanonRelationship rel = new CanonRelationship();
+        rel.setProject(proj);
+        rel.setSource(src);
+        rel.setFromChar(fromChar);
+        rel.setToChar(toChar);
+        rel.setRelType(relType);
+        rel.setDescription(note);
+        rel.setVerified(false);
+        rel.setCreatedAt(Instant.now());
+        canonRels.save(rel);
+
+        return new CanonRelationshipAddResult("ok", rel.getId().toString(), fromChar, toChar, relType);
+    }
+
+    // ── result records ──
+
     public record CanonImportResult(String status, String sourceId, String sourceName, String note) {
     }
 
@@ -232,5 +352,15 @@ public class CanonService {
     }
 
     public record CanonStatusSetResult(String status, String canonEventId, String eventName, String newStatus) {
+    }
+
+    public record CanonCharacterAddResult(String status, String characterId, String name) {
+    }
+
+    public record CanonEventAddResult(String status, String eventId, String name) {
+    }
+
+    public record CanonRelationshipAddResult(String status, String relationshipId,
+                                             String fromChar, String toChar, String relType) {
     }
 }

@@ -249,6 +249,7 @@ mcp__novel-mcp-server__chapter_sync
   phase: "{阶段}"
   characters: ["{出场角色列表}"]
   items: ["{出场物品列表}"]
+  locations: ["{出场地点列表}"]
   embeddings: ["{段落1向量}", "{段落2向量}", ...]
 
 # ② 记录人物状态快照
@@ -301,6 +302,22 @@ mcp__novel-mcp-server__location_update
 # ⑥ 时间线矛盾检查
 mcp__novel-mcp-server__timeline_check
   projectId: "{项目ID}"
+
+# ⑦ 语法检查
+mcp__novel-mcp-server__grammar_check
+  text: "{正文}"
+  language: "zh-CN"
+# 如有问题修复后重新 sync
+
+# ⑧ 正典事件走向（仅同人项目）
+# 如果本章触发/修改/跳过了正典事件，逐条记录：
+mcp__novel-mcp-server__canon_status_set
+  projectId: "{项目ID}"
+  canonEventId: "{正典事件ID}"
+  status: "triggered/modified/skipped"
+  occurredInChapter: {N}
+  actualDescription: "{实际发生的情况}"
+  divergenceReason: "{偏离原因}"
 ```
 
 ### 7. 更新本地文件

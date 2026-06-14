@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,12 +33,14 @@ public class UniverseService {
     private final UniverseRepository universes;
     private final UniverseRelationRepository relations;
     private final ProjectRepository projects;
+    private final Neo4jClient neo4j;
 
     public UniverseService(UniverseRepository universes, UniverseRelationRepository relations,
-                           ProjectRepository projects) {
+                           ProjectRepository projects, Neo4jClient neo4j) {
         this.universes = universes;
         this.relations = relations;
         this.projects = projects;
+        this.neo4j = neo4j;
     }
 
 
@@ -71,6 +74,20 @@ public class UniverseService {
         u.setCreatedAt(Instant.now());
         u.setUpdatedAt(Instant.now());
         universes.save(u);
+
+        // Neo4j: create :Universe node
+        try {
+            neo4j.query("""
+                            MERGE (u:Universe {project_id: $pid, name: $name})
+                            SET u.type = $type
+                            """)
+                    .bind(projectId).to("pid")
+                    .bind(name).to("name")
+                    .bind(type).to("type")
+                    .run();
+        } catch (Exception e) {
+            log.warn("Neo4j universe node creation failed for {}/{}", projectId, name, e);
+        }
 
         return new UniverseCreateResult("ok", u.getId().toString(), name, type);
     }
@@ -135,6 +152,22 @@ public class UniverseService {
         r.setDescription(description != null ? description : "");
         r.setCreatedAt(Instant.now());
         relations.save(r);
+
+        // Neo4j: create relationship between :Universe nodes
+        try {
+            neo4j.query("""
+                            MATCH (a:Universe {project_id: $pid, name: $fromName})
+                            MATCH (b:Universe {project_id: $pid, name: $toName})
+                            MERGE (a)-[:RELATED_TO {type: $relType}]->(b)
+                            """)
+                    .bind(projectId).to("pid")
+                    .bind(from.getName()).to("fromName")
+                    .bind(to.getName()).to("toName")
+                    .bind(relationType).to("relType")
+                    .run();
+        } catch (Exception e) {
+            log.warn("Neo4j universe link failed for {}/{}->{}", projectId, from.getName(), to.getName(), e);
+        }
 
         return new UniverseLinkResult("ok", r.getId().toString(),
                 from.getName(), to.getName(), relationType);
