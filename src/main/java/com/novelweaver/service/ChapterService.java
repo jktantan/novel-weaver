@@ -1,13 +1,7 @@
 package com.novelweaver.service;
 
-/*
- * Chapter Service / 章节管理 / 章管理
- *
- * CN 章节同步、获取、列表
- * JP 章の同期、取得、一覧
- * EN Chapter sync, get, list
- */
-
+import com.arcadedb.remote.RemoteDatabase;
+import com.novelweaver.config.ArcadeDBManager;
 import com.novelweaver.model.Chapter;
 import com.novelweaver.model.ChapterParagraph;
 import com.novelweaver.model.ChapterVersion;
@@ -20,156 +14,57 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class ChapterService {
 
     private static final Logger log = LoggerFactory.getLogger(ChapterService.class);
-    private static final int CHUNK_TARGET = 700;
-    private static final int OVERLAP_CP = 100;
-    private final ProjectRepository projects;
+
     private final ChapterRepository chapters;
     private final ChapterVersionRepository versions;
     private final ChapterParagraphRepository paragraphs;
-    private final Neo4jClient neo4j;
+    private final ProjectRepository projects;
+    private final ArcadeDBManager arcadeDB;
     private final WebClient meiliClient;
 
-
-    public ChapterService(ProjectRepository projects, ChapterRepository chapters,
-                          ChapterVersionRepository versions, ChapterParagraphRepository paragraphs,
-                          Neo4jClient neo4j, WebClient.Builder wcb,
-                          @Value("${novel.meili.url}") String meiliUrl,
-                          @Value("${novel.meili.master-key}") String meiliKey) {
-        this.projects = projects;
+    public ChapterService(ChapterRepository chapters, ChapterVersionRepository versions,
+                          ChapterParagraphRepository paragraphs, ProjectRepository projects,
+                          ArcadeDBManager arcadeDB, WebClient.Builder wcb,
+                          @org.springframework.beans.factory.annotation.Value("${novel.meili.url}") String meiliUrl,
+                          @org.springframework.beans.factory.annotation.Value("${novel.meili.master-key}") String meiliKey) {
         this.chapters = chapters;
         this.versions = versions;
         this.paragraphs = paragraphs;
-        this.neo4j = neo4j;
-        this.meiliClient = wcb.baseUrl(meiliUrl)
-                .defaultHeader("Authorization", "Bearer " + meiliKey)
-                .build();
+        this.projects = projects;
+        this.arcadeDB = arcadeDB;
+        this.meiliClient = wcb.baseUrl(meiliUrl).defaultHeader("Authorization", "Bearer " + meiliKey).build();
     }
 
-    static String textTruncate(String text, int maxCodePoints) {
-        if (text == null) return "";
-        int len = text.codePointCount(0, text.length());
-        if (len <= maxCodePoints) return text;
-        return text.substring(0, text.offsetByCodePoints(0, maxCodePoints)) + "…";
-    }
-
-    // ═══════════════════════════════════════════════
-    // 分段
-    // ═══════════════════════════════════════════════
-
-    static List<Segment> segment(String content) {
-        List<Segment> result = new ArrayList<>();
-        String[] scenes = content.split("\\r?\\n(?=## )");
-        for (String block : scenes) {
-            String[] lines = block.split("\\r?\\n", 2);
-            String headline = lines[0].replaceAll("^#+\\s*", "").trim();
-            String body = lines.length > 1 ? lines[1] : "";
-
-            int len = body.codePointCount(0, body.length());
-            if (len <= 800) {
-                result.add(new Segment(headline, block, classify(body)));
-            } else {
-                result.addAll(splitChunks(headline, body, len));
-            }
-        }
-        return result;
-    }
-
-    /*
-     * 获取章节 / 取得 / Get
-     *
-     * CN 获取单章正文
-     * JP 単章の本文を取得
-     * EN Get single chapter content
-     */
-    @McpTool(name = "chapter_get", description = "获取章节正文 | CN 获取章节正文 / JP 章の本文を取得 / EN Get chapter content")
-    public ChapterGetResult get(
-            @McpToolParam(description = "项目ID", required = true) String projectId,
-            @McpToolParam(description = "章节号", required = true) int number) {
-        Project proj = projects.findById(UUID.fromString(projectId))
-                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
-        Chapter ch = chapters.findByProjectAndChapterNumber(proj, number).orElse(null);
-        if (ch == null) {
-            return new ChapterGetResult("not_found", null, null, null);
-        }
-        return new ChapterGetResult("ok", ch.getId().toString(), ch.getTitle(), ch.getContent());
-    }
-
-    private static List<Segment> splitChunks(String scene, String body, int totalCodePoints) {
-        List<Segment> chunks = new ArrayList<>();
-        int pos = 0;
+    private List<Segment> segment(String content) {
+        if (content == null || content.isBlank()) return List.of();
+        List<Segment> segs = new ArrayList<>();
+        String[] parts = content.split("\n\n");
         int seq = 0;
-        int seen = 0;
-        while (pos < body.length()) {
-            int remaining = totalCodePoints - seen;
-            int chunkChars = Math.min(CHUNK_TARGET, remaining);
-            int end = findBreak(body, pos, chunkChars);
-            String chunk = body.substring(pos, end).trim();
-            int chunkCP = chunk.codePointCount(0, chunk.length());
-            chunks.add(new Segment(scene + " [" + (seq + 1) + "]", chunk, classify(chunk)));
-            pos = end;
-            seq++;
-            seen += chunkCP;
-            if (pos >= body.length()) break;
-            int back = overlapBack(body, pos);
-            pos = Math.max(pos, back);
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.isBlank()) continue;
+            segs.add(new Segment("scene_" + (++seq), trimmed, "paragraph"));
         }
-        return chunks;
+        return segs.isEmpty() ? List.of(new Segment("main", content, "paragraph")) : segs;
     }
 
-    private static int findBreak(String text, int start, int targetChars) {
-        int searchEnd = Math.min(text.length(), start + targetChars + 100);
-        if (searchEnd >= text.length()) return text.length();
-        for (int i = start + targetChars - 50; i < searchEnd; i++) {
-            char c = text.charAt(i);
-            if (c == '\n' || c == '。' || c == '？' || c == '！' || c == '」') {
-                return i + 1;
-            }
-        }
-        return Math.min(text.length(), start + targetChars);
+    private String textTruncate(String text, int maxLen) {
+        if (text == null) return "";
+        return text.length() <= maxLen ? text : text.substring(0, maxLen);
     }
 
-    private static int overlapBack(String text, int pos) {
-        int count = 0;
-        for (int i = pos - 1; i >= 0 && count < OVERLAP_CP; i--) {
-            count += Character.charCount(text.codePointAt(i));
-            if (count >= OVERLAP_CP) return i;
-        }
-        return Math.max(0, pos - OVERLAP_CP);
-    }
-
-    static String classify(String text) {
-        int quotes = 0;
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == '"' || text.charAt(i) == '“' || text.charAt(i) == '”') quotes++;
-        }
-        int total = text.codePointCount(0, text.length());
-        return (quotes > 0 && total > 0 && (double) quotes / total > 0.05) ? "dialogue" : "narrative";
-    }
-
-    /*
-     * 同步章节 / 同期 / Sync
-     *
-     * CN 保存/更新章节，自动分段→PG+Meilisearch+Neo4j
-     * JP 章を保存/更新、自動分割→PG+Meilisearch+Neo4j
-     * EN Save/update chapter, auto-segment→PG+Meilisearch+Neo4j
-     */
-    @McpTool(name = "chapter_sync", description = "保存/更新章节 — 自动分段 → embedding → PG + Meilisearch + Neo4j | CN 保存/更新章节 / JP 章を保存/更新 / EN Save/update chapter")
+    @McpTool(name = "chapter_sync", description = "保存/更新章节 | CN 保存/更新章节 / JP 章を保存/更新 / EN Save/update chapter")
     @Transactional
     public ChapterSyncResult sync(
             @McpToolParam(description = "项目ID", required = true) String projectId,
@@ -180,7 +75,7 @@ public class ChapterService {
             @McpToolParam(description = "出场角色列表", required = false) List<String> characters,
             @McpToolParam(description = "出场物品列表", required = false) List<String> items,
             @McpToolParam(description = "出场地点列表", required = false) List<String> locations,
-            @McpToolParam(description = "段落向量（pgvector格式字符串，顺序与分段结果一致）", required = false) List<String> embeddings) {
+            @McpToolParam(description = "段落向量", required = false) List<String> embeddings) {
 
         long t0 = System.currentTimeMillis();
 
@@ -202,7 +97,6 @@ public class ChapterService {
         chapter.setUpdatedAt(Instant.now());
         chapter = chapters.save(chapter);
 
-        // 版本——null-safe unboxing
         Integer maxVer = versions.findMaxVersionByChapter(chapter);
         int newVer = (maxVer != null ? maxVer : 0) + 1;
         ChapterVersion ver = new ChapterVersion();
@@ -213,11 +107,9 @@ public class ChapterService {
         ver.setCreatedAt(Instant.now());
         versions.save(ver);
 
-        // 分段
         List<Segment> segs = segment(content);
         int paraCount = segs.size();
 
-        // 删旧段 + 写新段
         List<ChapterParagraph> oldParas = paragraphs.findByChapterOrderBySeq(chapter);
         paragraphs.deleteAll(oldParas);
 
@@ -240,7 +132,6 @@ public class ChapterService {
         paragraphs.saveAll(batch);
         paragraphs.flush();
 
-        // Meilisearch 索引
         boolean meiliOk = false;
         try {
             meiliClient.post()
@@ -252,158 +143,142 @@ public class ChapterService {
                             "title", title,
                             "content", textTruncate(content, 10000),
                             "phase", phase != null ? phase : "")))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
+                    .retrieve().toBodilessEntity().block();
             meiliOk = true;
         } catch (Exception e) {
             log.warn("Meilisearch indexing failed for chapter {}", chapter.getId(), e);
         }
 
-        // Neo4j: MERGE chapter + :NEXT 链
-        List<String> neo4jErrors = new ArrayList<>();
-        try {
-            neo4j.query("""
-                            MERGE (ch:Chapter {project_id: $pid, number: $num})
-                            SET ch.title = $title, ch.phase = $phase, ch.status = 'draft',
-                                ch.updatedAt = datetime()
-                            """)
-                    .bind(projectId).to("pid")
-                    .bind(number).to("num")
-                    .bind(title).to("title")
-                    .bind(phase != null ? phase : "").to("phase")
-                    .run();
+        // ArcadeDB: chapter + NEXT chain + appearance relationships
+        List<String> arcErrors = new ArrayList<>();
+        try (RemoteDatabase db = arcadeDB.open(projectId)) {
+            db.command("cypher", """
+                    MERGE (ch:Chapter {number: $num})
+                    SET ch.title = $title, ch.phase = $phase, ch.status = 'draft', ch.updatedAt = datetime()
+                    """, Map.of("num", number, "title", title, "phase", phase != null ? phase : ""));
 
             if (number > 1) {
-                neo4j.query("""
-                                MATCH (prev:Chapter {project_id: $pid, number: $prevNum})
-                                MATCH (curr:Chapter {project_id: $pid, number: $num})
-                                MERGE (prev)-[:NEXT]->(curr)
-                                """)
-                        .bind(projectId).to("pid")
-                        .bind(number - 1).to("prevNum")
-                        .bind(number).to("num")
-                        .run();
+                db.command("cypher", """
+                        MATCH (prev:Chapter {number: $prevNum})
+                        MATCH (curr:Chapter {number: $num})
+                        MERGE (prev)-[:NEXT]->(curr)
+                        """, Map.of("prevNum", number - 1, "num", number));
             }
         } catch (Exception e) {
-            log.warn("Neo4j chapter sync failed for chapter {}-{}", projectId, number, e);
-            neo4jErrors.add("chapter: " + e.getMessage());
+            log.warn("ArcadeDB chapter sync failed for {}-{}", projectId, number, e);
+            arcErrors.add("chapter: " + e.getMessage());
         }
 
-        // Neo4j: 人物出场关系 — 批量 UNWIND
+        // Character appearances
         if (characters != null && !characters.isEmpty()) {
-            try {
-                // 一步：批量创建角色节点 + APPEARS_IN 关系
-                neo4j.query("""
-                                UNWIND $names AS name
-                                MERGE (c:Character {project_id: $pid, name: name})
-                                SET c.identity = coalesce(c.identity, '{}')
-                                WITH c
-                                MATCH (ch:Chapter {project_id: $pid, number: $num})
-                                MERGE (c)-[:APPEARS_IN]->(ch)
-                                """)
-                        .bind(projectId).to("pid")
-                        .bind(number).to("num")
-                        .bind(characters).to("names")
-                        .run();
+            try (RemoteDatabase db = arcadeDB.open(projectId)) {
+                for (String name : characters) {
+                    db.command("cypher", """
+                            MERGE (c:Character {name: $name})
+                            SET c.identity = coalesce(c.identity, '{}')
+                            WITH c
+                            MATCH (ch:Chapter {number: $num})
+                            MERGE (c)-[:APPEARS_IN]->(ch)
+                            """, Map.of("name", name, "num", number));
+                }
             } catch (Exception e) {
-                log.warn("Neo4j character appearance sync failed for chapter {}-{}", projectId, number, e);
-                neo4jErrors.add("characters: " + e.getMessage());
+                log.warn("ArcadeDB character appearance sync failed for {}-{}", projectId, number, e);
+                arcErrors.add("characters: " + e.getMessage());
             }
         }
 
-        // Neo4j: 物品出场关系 — 批量 UNWIND
+        // Item appearances
         if (items != null && !items.isEmpty()) {
-            try {
-                neo4j.query("""
-                                UNWIND $names AS name
-                                MERGE (it:Item {project_id: $pid, name: name})
-                                SET it.identity = coalesce(it.identity, '{}')
-                                WITH it
-                                MATCH (ch:Chapter {project_id: $pid, number: $num})
-                                MERGE (it)-[:APPEARS_IN]->(ch)
-                                """)
-                        .bind(projectId).to("pid")
-                        .bind(number).to("num")
-                        .bind(items).to("names")
-                        .run();
+            try (RemoteDatabase db = arcadeDB.open(projectId)) {
+                for (String name : items) {
+                    db.command("cypher", """
+                            MERGE (it:Item {name: $name})
+                            SET it.identity = coalesce(it.identity, '{}')
+                            WITH it
+                            MATCH (ch:Chapter {number: $num})
+                            MERGE (it)-[:APPEARS_IN]->(ch)
+                            """, Map.of("name", name, "num", number));
+                }
             } catch (Exception e) {
-                log.warn("Neo4j item appearance sync failed for chapter {}-{}", projectId, number, e);
-                neo4jErrors.add("items: " + e.getMessage());
+                log.warn("ArcadeDB item appearance sync failed for {}-{}", projectId, number, e);
+                arcErrors.add("items: " + e.getMessage());
             }
         }
 
-        // Neo4j: 地点出场关系 — 批量 UNWIND
+        // Location appearances
         if (locations != null && !locations.isEmpty()) {
-            try {
-                neo4j.query("""
-                                UNWIND $names AS name
-                                MERGE (loc:Location {project_id: $pid, name: name})
-                                SET loc.identity = coalesce(loc.identity, '{}')
-                                WITH loc
-                                MATCH (ch:Chapter {project_id: $pid, number: $num})
-                                MERGE (loc)-[:APPEARS_IN]->(ch)
-                                """)
-                        .bind(projectId).to("pid")
-                        .bind(number).to("num")
-                        .bind(locations).to("names")
-                        .run();
+            try (RemoteDatabase db = arcadeDB.open(projectId)) {
+                for (String name : locations) {
+                    db.command("cypher", """
+                            MERGE (loc:Location {name: $name})
+                            SET loc.identity = coalesce(loc.identity, '{}')
+                            WITH loc
+                            MATCH (ch:Chapter {number: $num})
+                            MERGE (loc)-[:APPEARS_IN]->(ch)
+                            """, Map.of("name", name, "num", number));
+                }
             } catch (Exception e) {
-                log.warn("Neo4j location appearance sync failed for chapter {}-{}", projectId, number, e);
-                neo4jErrors.add("locations: " + e.getMessage());
+                log.warn("ArcadeDB location appearance sync failed for {}-{}", projectId, number, e);
+                arcErrors.add("locations: " + e.getMessage());
             }
         }
 
         long elapsed = System.currentTimeMillis() - t0;
-
-        return new ChapterSyncResult(
-                "ok", chapter.getId().toString(), newVer, paraCount, elapsed,
-                meiliOk, neo4jErrors.isEmpty() ? null : String.join("; ", neo4jErrors));
+        return new ChapterSyncResult("ok", chapter.getId().toString(), newVer, paraCount, elapsed,
+                meiliOk, arcErrors.isEmpty() ? null : String.join("; ", arcErrors));
     }
 
-    /*
-     * 章节列表 / 一覧 / List
-     *
-     * CN 列出项目所有章节
-     * JP プロジェクトの全章を一覧表示
-     * EN List all chapters in project
-     */
+    @McpTool(name = "chapter_get", description = "获取章节正文 | CN 获取章节正文 / JP 章の本文を取得 / EN Get chapter content")
+    public ChapterGetResult get(
+            @McpToolParam(description = "项目ID", required = true) String projectId,
+            @McpToolParam(description = "章节号", required = true) int number) {
+
+        Project proj = projects.findById(UUID.fromString(projectId))
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+        Chapter ch = chapters.findByProjectAndChapterNumber(proj, number)
+                .orElseThrow(() -> new IllegalArgumentException("Chapter not found: " + number));
+
+        return new ChapterGetResult(ch.getChapterNumber(), ch.getTitle(), ch.getContent(),
+                ch.getWordCount(), ch.getPhase(), ch.getStatus());
+    }
+
     @McpTool(name = "chapter_list", description = "列出所有章节 | CN 列出所有章节 / JP 全章を一覧表示 / EN List all chapters")
     public ChapterListResult list(
             @McpToolParam(description = "项目ID", required = true) String projectId,
-            @McpToolParam(description = "返回数量上限（默认50）", required = false) Integer limit,
-            @McpToolParam(description = "偏移量（默认0）", required = false) Integer offset) {
+            @McpToolParam(description = "返回数量上限", required = false) Integer limit,
+            @McpToolParam(description = "偏移量", required = false) Integer offset) {
+
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
-        List<Chapter> chs = chapters.findByProjectOrderByChapterNumber(proj);
+        List<Chapter> all = chapters.findByProjectOrderByChapterNumber(proj);
         int off = offset != null ? Math.max(0, offset) : 0;
-        int lim = limit != null ? Math.max(1, limit) : 50;
-        if (off >= chs.size()) {
-            return new ChapterListResult(List.of(), "offset " + off + " >= total " + chs.size());
+        int lim = limit != null ? Math.max(1, Math.min(limit, 100)) : 50;
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = off; i < Math.min(all.size(), off + lim); i++) {
+            Chapter c = all.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("number", c.getChapterNumber());
+            m.put("title", c.getTitle());
+            m.put("word_count", c.getWordCount());
+            m.put("phase", c.getPhase());
+            m.put("status", c.getStatus());
+            result.add(m);
         }
-        int to = Math.min(off + lim, chs.size());
-        List<ChapterInfo> infos = chs.subList(off, to).stream()
-                .map(c -> new ChapterInfo(c.getChapterNumber(), c.getTitle(), c.getStatus(), c.getWordCount()))
-                .toList();
-        return new ChapterListResult(infos, lim + "/" + chs.size());
+        return new ChapterListResult(all.size(), result);
     }
 
-    record Segment(String scene, String text, String type) {
+    private record Segment(String scene, String text, String type) {
     }
 
-    // ── result records ──
-
-    public record ChapterSyncResult(String status, String chapterId, int version,
-                                    int paragraphCount, long processingMs,
-                                    boolean meilisearchIndexed, String note) {
+    public record ChapterSyncResult(String status, String chapterId, int version, int paragraphCount,
+                                    long elapsedMs, boolean meilisearchOk, String arcadeDbErrors) {
     }
 
-    public record ChapterGetResult(String status, String chapterId, String title, String content) {
+    public record ChapterGetResult(int number, String title, String content, int wordCount, String phase,
+                                   String status) {
     }
 
-    public record ChapterListResult(List<ChapterInfo> chapters, String note) {
-    }
-
-    public record ChapterInfo(int number, String title, String status, Integer wordCount) {
+    public record ChapterListResult(int total, List<Map<String, Object>> chapters) {
     }
 }

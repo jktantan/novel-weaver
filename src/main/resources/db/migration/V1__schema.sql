@@ -259,9 +259,9 @@ CREATE TABLE character_relationships
 );
 
 COMMENT
-ON TABLE character_relationships IS '人物关系表（PSQL 端，与 Neo4j 互补）
-JP 人物関係テーブル（PSQL側、Neo4jと補完関係）
-EN Character relationships table (PSQL side, complementary with Neo4j)';
+ON TABLE character_relationships IS '人物关系表（PSQL 端，与 ArcadeDB 互补）
+JP 人物関係テーブル（PSQL側、ArcadeDBと補完関係）
+EN Character relationships table (PSQL side, complementary with ArcadeDB)';
 
 CREATE INDEX idx_relationships_from ON character_relationships (from_char);
 CREATE INDEX idx_relationships_to ON character_relationships (to_char);

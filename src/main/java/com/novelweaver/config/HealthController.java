@@ -3,13 +3,12 @@ package com.novelweaver.config;
 /*
  * Health Check / 健康检查 / ヘルスチェック
  *
- * CN Docker 健康检查端点 — 返回 PG + Neo4j 连通性
- * JP Docker ヘルスチェック用エンドポイント — PG + Neo4j 疎通確認
- * EN Docker health check endpoint — returns PG + Neo4j connectivity
+ * CN Docker 健康检查端点 — 返回 PG + ArcadeDB 连通性
+ * JP Docker ヘルスチェック用エンドポイント — PG + ArcadeDB 疎通確認
+ * EN Docker health check endpoint — returns PG + ArcadeDB connectivity
  */
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,7 +25,7 @@ public class HealthController {
     private DataSource dataSource;
 
     @Autowired(required = false)
-    private Neo4jClient neo4j;
+    private ArcadeDBManager arcadeDB;
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
@@ -42,19 +41,18 @@ public class HealthController {
         }
         status.put("postgresql", pgOk ? "UP" : "DOWN");
 
-        // Neo4j 连通性检查
-        boolean neoOk = false;
-        if (neo4j != null) {
+        // ArcadeDB 连通性检查
+        boolean arcOk = false;
+        if (arcadeDB != null) {
             try {
-                neo4j.query("RETURN 1").fetch().all();
-                neoOk = true;
+                arcOk = arcadeDB.isAlive();
             } catch (Exception ignored) {
             }
         }
-        status.put("neo4j", neoOk ? "UP" : "DOWN");
+        status.put("arcadedb", arcOk ? "UP" : "DOWN");
 
         // 整体状态
-        boolean allUp = pgOk && neoOk;
+        boolean allUp = pgOk && arcOk;
         status.put("status", allUp ? "UP" : "DEGRADED");
 
         return ResponseEntity.ok(status);

@@ -35,11 +35,13 @@ spring:
   flyway:
     locations: classpath:db/migration
     enabled: true
-  neo4j:
-    uri: ${NEO4J_URI:bolt://localhost:7687}
-    authentication:
-      username: ${NEO4J_USER:neo4j}
-      password: ${NEO4J_PASSWORD:change-me}
+
+# ── ArcadeDB ──
+arcadedb:
+  host: ${ARCADEDB_HOST:localhost}
+  port: ${ARCADEDB_PORT:2480}
+  user: ${ARCADEDB_USER:root}
+  password: ${ARCADEDB_PASSWORD:change-me}
 
 # ── Novel Weaver 外部服务 ──
 novel:

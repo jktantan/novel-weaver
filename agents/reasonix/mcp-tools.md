@@ -52,9 +52,9 @@ mcp__novel-mcp-server__chapter_sync
   title: "标题"
   content: "# 正文..."
   phase: "draft"           // 可选
-  characters: ["角色A","角色B"]   // 可选——自动建 Neo4j 出场关系
+  characters: ["角色A","角色B"]   // 可选——自动建 ArcadeDB 出场关系
   items: ["圣剑"]                 // 可选
-  locations: ["王都"]             // 可选——自动建 Neo4j 出场关系
+  locations: ["王都"]             // 可选——自动建 ArcadeDB 出场关系
 
 mcp__novel-mcp-server__chapter_get
   projectId: "<项目ID>"
@@ -88,7 +88,7 @@ mcp__novel-mcp-server__character_snapshot
   projectId: "<项目ID>"
   name: "角色名"
   chapterNumber: 1
-  location: "地点"           // 可选——自动建 Neo4j [:VISITED] 边
+  location: "地点"           // 可选——自动建 ArcadeDB [:VISITED] 边
   identity: {"generation":1}   // 可选——区分同名角色
   physical: "受伤"
   psychology: "愤怒"
@@ -131,7 +131,7 @@ mcp__novel-mcp-server__item_query
   projectId: "<项目ID>"
   name: "圣剑Excalibur"
   identity: {"era":"黄金时代"}   // 可选——不传且同名多条时返回 allProfiles
-  // 返回：基本信息 + 归属变更历史 + Neo4j 关联图谱
+  // 返回：基本信息 + 归属变更历史 + ArcadeDB 关联图谱
 ```
 
 ## 地点
@@ -198,7 +198,7 @@ mcp__novel-mcp-server__timeline_event_update
 
 mcp__novel-mcp-server__timeline_check
   projectId: "<项目ID>"
-  // 返回：顺序冲突 + mandatory 事件跳过/修改告警 + Neo4j 环检测
+  // 返回：顺序冲突 + mandatory 事件跳过/修改告警 + ArcadeDB 环检测
 
 mcp__novel-mcp-server__timeline_link_create
   projectId: "<项目ID>"
@@ -368,5 +368,5 @@ mcp__novel-mcp-server__project_export
 mcp__novel-mcp-server__project_import
   projectId: "<项目ID>"
   jsonData: "{...从 export 得到的完整 JSON ...}"
-  // 自动重建 PG 数据 + Neo4j 图节点和关系
+  // 自动重建 PG 数据 + ArcadeDB 图节点和关系
 ```

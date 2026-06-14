@@ -41,4 +41,5 @@ current_status: { 正常/损坏/遗失/销毁 }
 ## 备注
 
 - MCP 工具：`item_register` 注册 → `item_update` 更新状态/持有者 → `item_query` 查询详情和关联图谱
-- Neo4j 关系：`(:Character)-[:OWNS]->(:Item)` / `(:Location)-[:CONTAINS]->(:Item)` / `(:Item)-[:APPEARS_IN]->(:Chapter)`
+- ArcadeDB 关系：`(:Character)-[:OWNS]->(:Item)` / `(:Location)-[:CONTAINS]->(:Item)` /
+  `(:Item)-[:APPEARS_IN]->(:Chapter)`

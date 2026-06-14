@@ -13,7 +13,7 @@
 一个 Spring Boot 4.x 应用。做了两件事：
 
 1. **MCP Streamable HTTP 端点** — `POST /mcp`，给 AI 客户端调用
-2. **所有数据层查询/写入的编排** — PG + pgvector + Neo4j + Meilisearch + LanguageTool
+2. **所有数据层查询/写入的编排** — PG + pgvector + ArcadeDB + Meilisearch + LanguageTool
 
 Gateway 不调任何外部 LLM。推演和写作在客户端侧完成。
 
@@ -96,16 +96,16 @@ gateway/src/main/resources/
 
 ### 3. 技术栈
 
-| 层 | 选型 |
-|----|------|
-| Framework | Spring Boot 4.0.6 · Java 21 |
-| MCP | STATELESS（无 session） |
-| DB Migration | Flyway（`ddl-auto: validate`） |
-| DB | PostgreSQL 16+ · pgvector |
-| Graph | Neo4j 5 Community（直接 Cypher） |
-| Search | Meilisearch（HTTP，无 SDK） |
-| Syntax | LanguageTool（HTTP POST） |
-| Boilerplate | Lombok（entity 用 `@Getter @Setter`） |
+| 层            | 选型                                 |
+|--------------|------------------------------------|
+| Framework    | Spring Boot 4.0.6 · Java 21        |
+| MCP          | STATELESS（无 session）               |
+| DB Migration | Flyway（`ddl-auto: validate`）       |
+| DB           | PostgreSQL 16+ · pgvector          |
+| Graph        | ArcadeDB 5 Community（直接 Cypher）    |
+| Search       | Meilisearch（HTTP，无 SDK）            |
+| Syntax       | LanguageTool（HTTP POST）            |
+| Boilerplate  | Lombok（entity 用 `@Getter @Setter`） |
 
 ---
 
@@ -206,12 +206,12 @@ spring.ai.mcp.server:
 
 ### 8. 外部服务
 
-| 服务 | 接入方式 |
-|------|---------|
-| **Meilisearch** | 直接 HTTP（WebClient），索引名 `novel_chapters` |
-| **LanguageTool** | HTTP POST `/v2/check`（form-encoded） |
-| **Neo4j** | `Neo4jClient` 直接执行 Cypher，无 @Node 实体 |
-| **Ollama (bge-m3)** | 客户端侧调用，Gateway 只存向量到 pgvector |
+| 服务                  | 接入方式                                    |
+|---------------------|-----------------------------------------|
+| **Meilisearch**     | 直接 HTTP（WebClient），索引名 `novel_chapters` |
+| **LanguageTool**    | HTTP POST `/v2/check`（form-encoded）     |
+| **ArcadeDB**        | `ArcadeDBClient` 直接执行 Cypher，无 @Node 实体 |
+| **Ollama (bge-m3)** | 客户端侧调用，Gateway 只存向量到 pgvector           |
 
 ---
 
@@ -230,7 +230,7 @@ spring.ai.mcp.server:
 Spring Boot 4.x アプリケーション。二つのことを行う：
 
 1. **MCP Streamable HTTP エンドポイント** — `POST /mcp`、AI クライアントから呼び出し
-2. **全データ層のクエリ/書き込みのオーケストレーション** — PG + pgvector + Neo4j + Meilisearch + LanguageTool
+2. **全データ層のクエリ/書き込みのオーケストレーション** — PG + pgvector + ArcadeDB + Meilisearch + LanguageTool
 
 Gateway は外部 LLM を呼び出さない。推論と執筆はクライアント側で完了。
 
@@ -310,16 +310,16 @@ gateway/src/main/resources/
 
 ### 3. 技術スタック
 
-| 層 | 選定 |
-|----|------|
-| Framework | Spring Boot 4.0.6 · Java 21 |
-| MCP | STATELESS（セッションなし） |
-| DB Migration | Flyway（`ddl-auto: validate`） |
-| DB | PostgreSQL 16+ · pgvector |
-| Graph | Neo4j 5 Community（直接 Cypher） |
-| Search | Meilisearch（HTTP、SDK なし） |
-| Syntax | LanguageTool（HTTP POST） |
-| Boilerplate | Lombok（entity は `@Getter @Setter`） |
+| 層            | 選定                                 |
+|--------------|------------------------------------|
+| Framework    | Spring Boot 4.0.6 · Java 21        |
+| MCP          | STATELESS（セッションなし）                 |
+| DB Migration | Flyway（`ddl-auto: validate`）       |
+| DB           | PostgreSQL 16+ · pgvector          |
+| Graph        | ArcadeDB 5 Community（直接 Cypher）    |
+| Search       | Meilisearch（HTTP、SDK なし）           |
+| Syntax       | LanguageTool（HTTP POST）            |
+| Boilerplate  | Lombok（entity は `@Getter @Setter`） |
 
 ---
 
@@ -421,12 +421,12 @@ spring.ai.mcp.server:
 
 ### 8. 外部サービス
 
-| サービス | 接続方式 |
-|----------|---------|
-| **Meilisearch** | 直接 HTTP（WebClient）、索引名 `novel_chapters` |
-| **LanguageTool** | HTTP POST `/v2/check`（form-encoded） |
-| **Neo4j** | `Neo4jClient` で直接 Cypher 実行、@Node entity なし |
-| **Ollama (bge-m3)** | クライアント側で呼び出し、Gateway はベクトルを pgvector に保存のみ |
+| サービス                | 接続方式                                           |
+|---------------------|------------------------------------------------|
+| **Meilisearch**     | 直接 HTTP（WebClient）、索引名 `novel_chapters`        |
+| **LanguageTool**    | HTTP POST `/v2/check`（form-encoded）            |
+| **ArcadeDB**        | `ArcadeDBClient` で直接 Cypher 実行、@Node entity なし |
+| **Ollama (bge-m3)** | クライアント側で呼び出し、Gateway はベクトルを pgvector に保存のみ     |
 
 ---
 
@@ -445,7 +445,7 @@ spring.ai.mcp.server:
 A Spring Boot 4.x application that does two things:
 
 1. **MCP Streamable HTTP endpoint** — `POST /mcp`, for AI clients to call
-2. **Orchestrates all data-layer queries/writes** — PG + pgvector + Neo4j + Meilisearch + LanguageTool
+2. **Orchestrates all data-layer queries/writes** — PG + pgvector + ArcadeDB + Meilisearch + LanguageTool
 
 Gateway does NOT call any external LLM. Deduction and writing happen on the client side.
 
@@ -525,16 +525,16 @@ gateway/src/main/resources/
 
 ### 3. Tech Stack
 
-| Layer | Choice |
-|-------|--------|
-| Framework | Spring Boot 4.0.6 · Java 21 |
-| MCP | STATELESS (no sessions) |
-| DB Migration | Flyway (`ddl-auto: validate`) |
-| DB | PostgreSQL 16+ · pgvector |
-| Graph | Neo4j 5 Community (direct Cypher) |
-| Search | Meilisearch (HTTP, no SDK) |
-| Syntax | LanguageTool (HTTP POST) |
-| Boilerplate | Lombok (`@Getter @Setter` on entities) |
+| Layer        | Choice                                 |
+|--------------|----------------------------------------|
+| Framework    | Spring Boot 4.0.6 · Java 21            |
+| MCP          | STATELESS (no sessions)                |
+| DB Migration | Flyway (`ddl-auto: validate`)          |
+| DB           | PostgreSQL 16+ · pgvector              |
+| Graph        | ArcadeDB 5 Community (direct Cypher)   |
+| Search       | Meilisearch (HTTP, no SDK)             |
+| Syntax       | LanguageTool (HTTP POST)               |
+| Boilerplate  | Lombok (`@Getter @Setter` on entities) |
 
 ---
 
@@ -636,11 +636,11 @@ spring.ai.mcp.server:
 
 ### 8. External Services
 
-| Service | Integration |
-|---------|-------------|
-| **Meilisearch** | Direct HTTP (WebClient), index name `novel_chapters` |
-| **LanguageTool** | HTTP POST `/v2/check` (form-encoded) |
-| **Neo4j** | `Neo4jClient` executes Cypher directly, no @Node entities |
+| Service             | Integration                                                      |
+|---------------------|------------------------------------------------------------------|
+| **Meilisearch**     | Direct HTTP (WebClient), index name `novel_chapters`             |
+| **LanguageTool**    | HTTP POST `/v2/check` (form-encoded)                             |
+| **ArcadeDB**        | `ArcadeDBClient` executes Cypher directly, no @Node entities     |
 | **Ollama (bge-m3)** | Called from client side; Gateway only stores vectors in pgvector |
 
 ---

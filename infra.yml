@@ -28,25 +28,22 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Neo4j 5 Community ──
-  # CN 人物关系图数据库 / JP 人物関係グラフDB / EN Character relationship graph DB
-  neo4j:
-    image: neo4j:5.26-community
-    container_name: nw-neo4j
+  # ── ArcadeDB 多模型数据库 ──
+  # CN 图 + 文档 + 向量 / JP グラフ+ドキュメント+ベクトル / EN Graph + Document + Vector
+  arcadedb:
+    image: arcadedb/arcadedb:25.4.1
+    container_name: nw-arcadedb
     restart: unless-stopped
     networks: [novel-weaver-network]
     environment:
-      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASS:-weaver_pass}
-      NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      ARCADEDB_SERVER_ROOT_PASSWORD: ${ARCADEDB_PASS:-weaver_pass}
     ports:
-      - "${NEO4J_HTTP_PORT:-7474}:7474"
-      - "${NEO4J_BOLT_PORT:-7687}:7687"
+      - "${ARCADEDB_PORT:-2480}:2480"
+      - "${ARCADEDB_BOLT_PORT:-2424}:2424"
     volumes:
-      - neo4jdata:/data
-      - neo4jlogs:/logs
+      - arcadedbdata:/data
     healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASS:-weaver_pass} 'RETURN 1'"]
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:2480/api/v1/ready || exit 1" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -96,6 +93,5 @@ networks:
 
 volumes:
   pgdata:
-  neo4jdata:
-  neo4jlogs:
+  arcadedbdata:
   meilidata:

@@ -68,69 +68,69 @@ What it doesn't do:
 
 **CN**
 
-| 约束 | 决定 | 说明 |
-|------|------|------|
-| **硬件** | 纯 CPU，无 GPU | 用户实际情况 |
-| **部署** | Docker Compose，全 HTTP 通信 | 所有服务容器化，MCP 走 HTTP |
-| **数据规模** | 百万字级，多元宇宙 | 总字数可能上百万。分段索引，单章独立文档 |
-| **Ollama 用途** | 必装：bge-m3（embedding） | 可选：qwen2.5:3b（轻量摘要/RAG 合成）——效果不好可直接去掉。写作机 localhost，走 CPU |
-| **推演引擎** | Reasonix (Claude)，在写作帧内完成 | 不下放到 Gateway。不调用外部 LLM |
-| **数据主权** | **本地 Markdown 是 primary source** | 服务器出问题数据不丢 |
-| **同步方向** | 本地 → 服务器（单向同步） | 主路径：Reasonix 写完直接调 API。备用：file-watcher 检测 Obsidian 变化后同步 |
-| **编辑器** | Reasonix（主） + Obsidian（辅） | Reasonix 原生调 MCP；Obsidian 靠 file-watcher 同步 |
-| **全文搜索** | **Meilisearch** | 模糊搜索（typo tolerance）、前缀匹配、近实时索引。不可用时降级 PG ILIKE |
-| **向量搜索** | pgvector + bge-m3 | 语义相似场景检索 |
-| **图谱** | Neo4j 5 Community | 人物关系、时间线、事件关联 |
-| **语法检查** | LanguageTool (silviof/languagetool) | 中文错别字、重复词、标点检查——Phase 0 内置 |
-| **项目隔离** | `project_id` 标签隔离 | Neo4j Community 单库 |
-| **项目上限** | 最多 10 个 | 标签隔离绰绰有余 |
-| **小说类型** | 原创 + 同人 | 同人需正典采集管线 |
-| **版权** | 不涉及——个人心愿创作，不收费 | 正典只存事实性信息 |
-| **时间线** | 支持回忆线、穿越、时间闭环 | Neo4j 图建模 |
+| 约束            | 决定                                  | 说明                                                        |
+|---------------|-------------------------------------|-----------------------------------------------------------|
+| **硬件**        | 纯 CPU，无 GPU                         | 用户实际情况                                                    |
+| **部署**        | Docker Compose，全 HTTP 通信            | 所有服务容器化，MCP 走 HTTP                                        |
+| **数据规模**      | 百万字级，多元宇宙                           | 总字数可能上百万。分段索引，单章独立文档                                      |
+| **Ollama 用途** | 必装：bge-m3（embedding）                | 可选：qwen2.5:3b（轻量摘要/RAG 合成）——效果不好可直接去掉。写作机 localhost，走 CPU |
+| **推演引擎**      | Reasonix (Claude)，在写作帧内完成           | 不下放到 Gateway。不调用外部 LLM                                    |
+| **数据主权**      | **本地 Markdown 是 primary source**    | 服务器出问题数据不丢                                                |
+| **同步方向**      | 本地 → 服务器（单向同步）                      | 主路径：Reasonix 写完直接调 API。备用：file-watcher 检测 Obsidian 变化后同步  |
+| **编辑器**       | Reasonix（主） + Obsidian（辅）           | Reasonix 原生调 MCP；Obsidian 靠 file-watcher 同步               |
+| **全文搜索**      | **Meilisearch**                     | 模糊搜索（typo tolerance）、前缀匹配、近实时索引。不可用时降级 PG ILIKE           |
+| **向量搜索**      | pgvector + bge-m3                   | 语义相似场景检索                                                  |
+| **图谱**        | ArcadeDB 5 Community                | 人物关系、时间线、事件关联                                             |
+| **语法检查**      | LanguageTool (silviof/languagetool) | 中文错别字、重复词、标点检查——Phase 0 内置                                |
+| **项目隔离**      | 物理租户（独立数据库）                         | ArcadeDB 每个项目独立 database                                  |
+| **项目上限**      | 最多 10 个                             | 标签隔离绰绰有余                                                  |
+| **小说类型**      | 原创 + 同人                             | 同人需正典采集管线                                                 |
+| **版权**        | 不涉及——个人心愿创作，不收费                     | 正典只存事实性信息                                                 |
+| **时间线**       | 支持回忆线、穿越、时间闭环                       | ArcadeDB 图建模                                              |
 
 **JP**
 
-| 制約 | 決定 | 説明 |
-|------|------|------|
-| **ハードウェア** | 純 CPU、GPU なし | ユーザーの実環境 |
-| **デプロイ** | Docker Compose、全 HTTP 通信 | 全サービスコンテナ化、MCP は HTTP |
-| **データ規模** | 百万字レベル、マルチユニバース | 総文字数は百万超の可能性。分割索引、単章独立ドキュメント |
-| **Ollama 用途** | 必須：bge-m3（embedding） | オプション：qwen2.5:3b（軽量要約/RAG 合成）——効果がなければ削除可。ライティングマシン localhost、CPU |
-| **推論エンジン** | Reasonix (Claude)、執筆フレーム内で完了 | Gateway に下ろさない。外部 LLM を呼ばない |
-| **データ主権** | **ローカル Markdown が primary source** | サーバー障害でもデータ消失なし |
-| **同期方向** | ローカル → サーバー（単方向同期） | 主経路：Reasonix が書き終えたら直接 API 呼び出し。予備：file-watcher が Obsidian の変更を検出して同期 |
-| **エディター** | Reasonix（主） + Obsidian（補） | Reasonix はネイティブに MCP 呼び出し。Obsidian は file-watcher 経由 |
-| **全文検索** | **Meilisearch** | あいまい検索（typo tolerance）、前方一致、ニアリアルタイム索引。利用不可時は PG ILIKE にフォールバック |
-| **ベクトル検索** | pgvector + bge-m3 | 意味的類似シーンの検索 |
-| **グラフ** | Neo4j 5 Community | キャラクター関係、タイムライン、イベント関連 |
-| **文法チェック** | LanguageTool (silviof/languagetool) | 中国語の誤字、重複語、句読点チェック——Phase 0 から内蔵 |
-| **プロジェクト分離** | `project_id` タグ分離 | Neo4j Community 単一データベース |
-| **プロジェクト上限** | 最大 10 | タグ分離で十分 |
-| **小説タイプ** | オリジナル＋二次創作 | 二次創作は正典収集パイプラインが必要 |
-| **著作権** | 関与しない——個人の趣味創作、無料 | 正典は事実情報のみ保存 |
-| **タイムライン** | 回想、タイムトラベル、時間ループ対応 | Neo4j グラフモデリング |
+| 制約            | 決定                                  | 説明                                                                    |
+|---------------|-------------------------------------|-----------------------------------------------------------------------|
+| **ハードウェア**    | 純 CPU、GPU なし                        | ユーザーの実環境                                                              |
+| **デプロイ**      | Docker Compose、全 HTTP 通信            | 全サービスコンテナ化、MCP は HTTP                                                 |
+| **データ規模**     | 百万字レベル、マルチユニバース                     | 総文字数は百万超の可能性。分割索引、単章独立ドキュメント                                          |
+| **Ollama 用途** | 必須：bge-m3（embedding）                | オプション：qwen2.5:3b（軽量要約/RAG 合成）——効果がなければ削除可。ライティングマシン localhost、CPU     |
+| **推論エンジン**    | Reasonix (Claude)、執筆フレーム内で完了        | Gateway に下ろさない。外部 LLM を呼ばない                                           |
+| **データ主権**     | **ローカル Markdown が primary source**  | サーバー障害でもデータ消失なし                                                       |
+| **同期方向**      | ローカル → サーバー（単方向同期）                  | 主経路：Reasonix が書き終えたら直接 API 呼び出し。予備：file-watcher が Obsidian の変更を検出して同期 |
+| **エディター**     | Reasonix（主） + Obsidian（補）           | Reasonix はネイティブに MCP 呼び出し。Obsidian は file-watcher 経由                  |
+| **全文検索**      | **Meilisearch**                     | あいまい検索（typo tolerance）、前方一致、ニアリアルタイム索引。利用不可時は PG ILIKE にフォールバック       |
+| **ベクトル検索**    | pgvector + bge-m3                   | 意味的類似シーンの検索                                                           |
+| **グラフ**       | ArcadeDB 5 Community                | キャラクター関係、タイムライン、イベント関連                                                |
+| **文法チェック**    | LanguageTool (silviof/languagetool) | 中国語の誤字、重複語、句読点チェック——Phase 0 から内蔵                                      |
+| **プロジェクト分離**  | 物理テナント（独立データベース）                    | ArcadeDB 各プロジェクト独立 database                                           |
+| **プロジェクト上限**  | 最大 10                               | タグ分離で十分                                                               |
+| **小説タイプ**     | オリジナル＋二次創作                          | 二次創作は正典収集パイプラインが必要                                                    |
+| **著作権**       | 関与しない——個人の趣味創作、無料                   | 正典は事実情報のみ保存                                                           |
+| **タイムライン**    | 回想、タイムトラベル、時間ループ対応                  | ArcadeDB グラフモデリング                                                     |
 
 **EN**
 
-| Constraint | Decision | Notes |
-|------------|----------|-------|
-| **Hardware** | CPU only, no GPU | User's actual environment |
-| **Deployment** | Docker Compose, all HTTP | All services containerized, MCP over HTTP |
-| **Data Scale** | Million-char level, multi-verse | Total characters may exceed one million. Segmented indexing, chapters as independent docs |
-| **Ollama usage** | Required: bge-m3 (embedding) | Optional: qwen2.5:3b (lightweight summary/RAG synthesis) — remove if ineffective. On writing machine localhost, CPU |
-| **Deduction engine** | Reasonix (Claude), inside writing frame | Not offloaded to Gateway. No external LLM calls |
-| **Data sovereignty** | **Local Markdown is primary source** | Server outage doesn't lose data |
-| **Sync direction** | Local → Server (one-way) | Primary: Reasonix calls API directly after writing. Backup: file-watcher detects Obsidian changes |
-| **Editor** | Reasonix (primary) + Obsidian (auxiliary) | Reasonix calls MCP natively; Obsidian syncs via file-watcher |
-| **Full-text search** | **Meilisearch** | Fuzzy search (typo tolerance), prefix match, near-real-time indexing. Falls back to PG ILIKE when unavailable |
-| **Vector search** | pgvector + bge-m3 | Semantic similarity scene retrieval |
-| **Graph** | Neo4j 5 Community | Character relationships, timelines, event connections |
-| **Grammar check** | LanguageTool (silviof/languagetool) | Chinese typo, duplicate word, punctuation check — built-in from Phase 0 |
-| **Project isolation** | `project_id` tag isolation | Neo4j Community single database |
-| **Project limit** | Max 10 | Tag isolation is more than sufficient |
-| **Fiction type** | Original + Fanfic | Fanfic requires canon collection pipeline |
-| **Copyright** | Not involved — personal passion, free | Canon stores factual info only |
-| **Timeline** | Supports flashback, time travel, time loops | Neo4j graph modeling |
+| Constraint            | Decision                                    | Notes                                                                                                               |
+|-----------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| **Hardware**          | CPU only, no GPU                            | User's actual environment                                                                                           |
+| **Deployment**        | Docker Compose, all HTTP                    | All services containerized, MCP over HTTP                                                                           |
+| **Data Scale**        | Million-char level, multi-verse             | Total characters may exceed one million. Segmented indexing, chapters as independent docs                           |
+| **Ollama usage**      | Required: bge-m3 (embedding)                | Optional: qwen2.5:3b (lightweight summary/RAG synthesis) — remove if ineffective. On writing machine localhost, CPU |
+| **Deduction engine**  | Reasonix (Claude), inside writing frame     | Not offloaded to Gateway. No external LLM calls                                                                     |
+| **Data sovereignty**  | **Local Markdown is primary source**        | Server outage doesn't lose data                                                                                     |
+| **Sync direction**    | Local → Server (one-way)                    | Primary: Reasonix calls API directly after writing. Backup: file-watcher detects Obsidian changes                   |
+| **Editor**            | Reasonix (primary) + Obsidian (auxiliary)   | Reasonix calls MCP natively; Obsidian syncs via file-watcher                                                        |
+| **Full-text search**  | **Meilisearch**                             | Fuzzy search (typo tolerance), prefix match, near-real-time indexing. Falls back to PG ILIKE when unavailable       |
+| **Vector search**     | pgvector + bge-m3                           | Semantic similarity scene retrieval                                                                                 |
+| **Graph**             | ArcadeDB 5 Community                        | Character relationships, timelines, event connections                                                               |
+| **Grammar check**     | LanguageTool (silviof/languagetool)         | Chinese typo, duplicate word, punctuation check — built-in from Phase 0                                             |
+| **Project isolation** | Physical tenant (independent database)      | ArcadeDB per-project database                                                                                       |
+| **Project limit**     | Max 10                                      | Tag isolation is more than sufficient                                                                               |
+| **Fiction type**      | Original + Fanfic                           | Fanfic requires canon collection pipeline                                                                           |
+| **Copyright**         | Not involved — personal passion, free       | Canon stores factual info only                                                                                      |
+| **Timeline**          | Supports flashback, time travel, time loops | ArcadeDB graph modeling                                                                                             |
 
 ---
 
@@ -148,7 +148,7 @@ What it doesn't do:
 │  │   ├── bge-m3 → embedding（必装）                │
 │  │   └── qwen2.5:3b → 摘要/关键词（可选，效果不佳可直接去掉）│
 │  └── 调 Gateway (HTTP)                             │
-│      ├── 查数据 → PG/Neo4j/Meilisearch              │
+│      ├── 查数据 → PG/ArcadeDB/Meilisearch              │
 │      ├── chapter_sync → 同步存储                    │
 │      └── review → 审查                             │
 │                                                    │
@@ -184,7 +184,7 @@ What it doesn't do:
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
-│  │PG 17  │ │Neo4j 5│ │Meilisearch │ │LangTool  │  │
+│  │PG 17  │ │ArcadeDB 5│ │Meilisearch │ │LangTool  │  │
 │  │+vector│ │标签隔 │ │ 模糊搜索    │ │ 语法检查  │  │
 │  │5432   │ │7687   │ │7700        │ │8010      │  │
 │  └───────┘ └───────┘ └────────────┘ └──────────┘  │
@@ -203,7 +203,7 @@ What it doesn't do:
 │  │   ├── bge-m3 → embedding（必須）                │
 │  │   └── qwen2.5:3b → 要約/キーワード（オプション、効果なければ削除）│
 │  └── Gateway を呼ぶ (HTTP)                         │
-│      ├── データ照会 → PG/Neo4j/Meilisearch          │
+│      ├── データ照会 → PG/ArcadeDB/Meilisearch          │
 │      ├── chapter_sync → 同期保存                    │
 │      └── review → レビュー                         │
 │                                                    │
@@ -239,7 +239,7 @@ What it doesn't do:
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
-│  │PG 17  │ │Neo4j 5│ │Meilisearch │ │LangTool  │  │
+│  │PG 17  │ │ArcadeDB 5│ │Meilisearch │ │LangTool  │  │
 │  │+vector│ │タグ分 │ │ あいまい検索│ │ 文法チェック│
 │  │5432   │ │7687   │ │7700        │ │8010      │  │
 │  └───────┘ └───────┘ └────────────┘ └──────────┘  │
@@ -258,7 +258,7 @@ What it doesn't do:
 │  │   ├── bge-m3 → embedding (required)             │
 │  │   └── qwen2.5:3b → summary/keywords (optional) │
 │  └── Calls Gateway (HTTP)                          │
-│      ├── Query data → PG/Neo4j/Meilisearch          │
+│      ├── Query data → PG/ArcadeDB/Meilisearch          │
 │      ├── chapter_sync → sync storage               │
 │      └── review → review                           │
 │                                                    │
@@ -294,7 +294,7 @@ What it doesn't do:
 │  └──────────────────────────────────────┘           │
 │                                                    │
 │  ┌───────┐ ┌───────┐ ┌────────────┐ ┌──────────┐  │
-│  │PG 17  │ │Neo4j 5│ │Meilisearch │ │LangTool  │  │
+│  │PG 17  │ │ArcadeDB 5│ │Meilisearch │ │LangTool  │  │
 │  │+vector│ │tag    │ │fuzzy search│ │grammar   │  │
 │  │5432   │ │7687   │ │7700        │ │8010      │  │
 │  └───────┘ └───────┘ └────────────┘ └──────────┘  │
@@ -305,39 +305,39 @@ What it doesn't do:
 
 **CN**
 
-| 组件 | 位置 | 职责 |
-|------|------|------|
-| **Reasonix (Claude)** | 写作机 | 🔴 全部创作层——推演、写作、审校。调写作机上的 Ollama 做 embedding/摘要。调服务器上的 Gateway 做数据查询/同步 |
-| **Ollama (bge-m3)** | 写作机 localhost:11434 | embedding 向量化（必装）。偶尔用于轻量摘要（可选 qwen2.5:3b）。不走服务器——写作机上本地调用 |
-| **Gateway** | 服务器 Docker | 纯数据层——无 LLM 依赖。处理数据 CRUD、搜索转发、图谱查询、语法检查 |
-| **PostgreSQL + pgvector** | 服务器 Docker | 结构化存储 + 向量索引 |
-| **Neo4j** | 服务器 Docker | 人物关系图谱、时间线 |
-| **Meilisearch** | 服务器 Docker | 全文搜索 + 模糊搜索 |
-| **LanguageTool** | 服务器 Docker | 中文语法/错别字/风格检查 |
+| 组件                        | 位置                  | 职责                                                                      |
+|---------------------------|---------------------|-------------------------------------------------------------------------|
+| **Reasonix (Claude)**     | 写作机                 | 🔴 全部创作层——推演、写作、审校。调写作机上的 Ollama 做 embedding/摘要。调服务器上的 Gateway 做数据查询/同步 |
+| **Ollama (bge-m3)**       | 写作机 localhost:11434 | embedding 向量化（必装）。偶尔用于轻量摘要（可选 qwen2.5:3b）。不走服务器——写作机上本地调用               |
+| **Gateway**               | 服务器 Docker          | 纯数据层——无 LLM 依赖。处理数据 CRUD、搜索转发、图谱查询、语法检查                                 |
+| **PostgreSQL + pgvector** | 服务器 Docker          | 结构化存储 + 向量索引                                                            |
+| **ArcadeDB**              | 服务器 Docker          | 人物关系图谱、时间线                                                              |
+| **Meilisearch**           | 服务器 Docker          | 全文搜索 + 模糊搜索                                                             |
+| **LanguageTool**          | 服务器 Docker          | 中文语法/错别字/风格检查                                                           |
 
 **JP**
 
-| コンポーネント | 配置 | 責務 |
-|--------------|------|------|
-| **Reasonix (Claude)** | ライティングマシン | 🔴 全創作層——推論、執筆、校正。ライティングマシンの Ollama で embedding/要約。サーバーの Gateway でデータ照会/同期 |
-| **Ollama (bge-m3)** | ライティングマシン localhost:11434 | embedding ベクトル化（必須）。軽量要約に使うことも（オプション qwen2.5:3b）。サーバーは経由せず、ローカルで呼び出し |
-| **Gateway** | サーバー Docker | 純データ層——LLM 依存なし。データ CRUD、検索転送、グラフ照会、文法チェック |
-| **PostgreSQL + pgvector** | サーバー Docker | 構造化ストレージ＋ベクトル索引 |
-| **Neo4j** | サーバー Docker | キャラクター関係グラフ、タイムライン |
-| **Meilisearch** | サーバー Docker | 全文検索＋あいまい検索 |
-| **LanguageTool** | サーバー Docker | 中国語文法/誤字/スタイルチェック |
+| コンポーネント                   | 配置                        | 責務                                                                         |
+|---------------------------|---------------------------|----------------------------------------------------------------------------|
+| **Reasonix (Claude)**     | ライティングマシン                 | 🔴 全創作層——推論、執筆、校正。ライティングマシンの Ollama で embedding/要約。サーバーの Gateway でデータ照会/同期 |
+| **Ollama (bge-m3)**       | ライティングマシン localhost:11434 | embedding ベクトル化（必須）。軽量要約に使うことも（オプション qwen2.5:3b）。サーバーは経由せず、ローカルで呼び出し       |
+| **Gateway**               | サーバー Docker               | 純データ層——LLM 依存なし。データ CRUD、検索転送、グラフ照会、文法チェック                                 |
+| **PostgreSQL + pgvector** | サーバー Docker               | 構造化ストレージ＋ベクトル索引                                                            |
+| **ArcadeDB**              | サーバー Docker               | キャラクター関係グラフ、タイムライン                                                         |
+| **Meilisearch**           | サーバー Docker               | 全文検索＋あいまい検索                                                                |
+| **LanguageTool**          | サーバー Docker               | 中国語文法/誤字/スタイルチェック                                                          |
 
 **EN**
 
-| Component | Location | Responsibilities |
-|-----------|----------|-----------------|
-| **Reasonix (Claude)** | Writing machine | 🔴 All creative layers — deduction, writing, review. Calls local Ollama for embedding/summary. Calls server Gateway for data query/sync |
-| **Ollama (bge-m3)** | Writing machine localhost:11434 | Embedding vectorization (required). Occasional light summarization (optional qwen2.5:3b). Local call, not via server |
-| **Gateway** | Server Docker | Pure data layer — no LLM dependency. Handles CRUD, search forwarding, graph queries, grammar check |
-| **PostgreSQL + pgvector** | Server Docker | Structured storage + vector index |
-| **Neo4j** | Server Docker | Character relationship graph, timelines |
-| **Meilisearch** | Server Docker | Full-text search + fuzzy search |
-| **LanguageTool** | Server Docker | Chinese grammar/typo/style check |
+| Component                 | Location                        | Responsibilities                                                                                                                        |
+|---------------------------|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| **Reasonix (Claude)**     | Writing machine                 | 🔴 All creative layers — deduction, writing, review. Calls local Ollama for embedding/summary. Calls server Gateway for data query/sync |
+| **Ollama (bge-m3)**       | Writing machine localhost:11434 | Embedding vectorization (required). Occasional light summarization (optional qwen2.5:3b). Local call, not via server                    |
+| **Gateway**               | Server Docker                   | Pure data layer — no LLM dependency. Handles CRUD, search forwarding, graph queries, grammar check                                      |
+| **PostgreSQL + pgvector** | Server Docker                   | Structured storage + vector index                                                                                                       |
+| **ArcadeDB**              | Server Docker                   | Character relationship graph, timelines                                                                                                 |
+| **Meilisearch**           | Server Docker                   | Full-text search + fuzzy search                                                                                                         |
+| **LanguageTool**          | Server Docker                   | Chinese grammar/typo/style check                                                                                                        |
 
 ### 为什么 Meilisearch 不能省 / Meilisearch が必須の理由 / Why Meilisearch Is Not Optional
 
@@ -521,7 +521,7 @@ First split by markdown headings (`##`) into scenes, then further split scenes e
                                                         ├── PG + 版本记录
                                                         ├── 分段 + embedding
                                                         ├── Meilisearch 索引
-                                                        └── Neo4j 节点
+                                                        └── ArcadeDB 节点
 ```
 
 **JP データフロー（主経路）**
@@ -533,7 +533,7 @@ First split by markdown headings (`##`) into scenes, then further split scenes e
                                                             ├── PG + バージョン記録
                                                             ├── 分割 + embedding
                                                             ├── Meilisearch 索引
-                                                            └── Neo4j ノード
+                                                            └── ArcadeDB ノード
 ```
 
 **EN Data Flow (Primary Path)**
@@ -545,7 +545,7 @@ You → Reasonix (Claude) → Generate/edit chapter
                                                         ├── PG + version history
                                                         ├── Segmentation + embedding
                                                         ├── Meilisearch index
-                                                        └── Neo4j nodes
+                                                        └── ArcadeDB nodes
 ```
 
 **CN 数据流（备用路径）**：`Obsidian 编辑 → Ctrl+S → file-watcher 检测 → POST /api/sync/chapter → DB 同步`
@@ -657,34 +657,34 @@ Reasonix calling MCP and writing local files are **consecutive operations in the
 
 **CN**
 
-| 文件 | 内容 | 用途 |
-|------|------|------|
-| `infra.yml` | PG + Neo4j + Meilisearch + LanguageTool | 基础设施——写一次后基本不改 |
-| `docker-compose.yml` | Spring Boot Gateway | 应用——经常改代码，单独重启 |
+| 文件                   | 内容                                         | 用途             |
+|----------------------|--------------------------------------------|----------------|
+| `infra.yml`          | PG + ArcadeDB + Meilisearch + LanguageTool | 基础设施——写一次后基本不改 |
+| `docker-compose.yml` | Spring Boot Gateway                        | 应用——经常改代码，单独重启 |
 
 **JP**
 
-| ファイル | 内容 | 用途 |
-|----------|------|------|
-| `infra.yml` | PG + Neo4j + Meilisearch + LanguageTool | インフラ——一度書けば基本的に変更なし |
-| `docker-compose.yml` | Spring Boot Gateway | アプリケーション——コード変更頻繁、個別再起動 |
+| ファイル                 | 内容                                         | 用途                      |
+|----------------------|--------------------------------------------|-------------------------|
+| `infra.yml`          | PG + ArcadeDB + Meilisearch + LanguageTool | インフラ——一度書けば基本的に変更なし     |
+| `docker-compose.yml` | Spring Boot Gateway                        | アプリケーション——コード変更頻繁、個別再起動 |
 
 **EN**
 
-| File | Contents | Purpose |
-|------|----------|---------|
-| `infra.yml` | PG + Neo4j + Meilisearch + LanguageTool | Infrastructure — write once, rarely change |
-| `docker-compose.yml` | Spring Boot Gateway | Application — frequent code changes, restart independently |
+| File                 | Contents                                   | Purpose                                                    |
+|----------------------|--------------------------------------------|------------------------------------------------------------|
+| `infra.yml`          | PG + ArcadeDB + Meilisearch + LanguageTool | Infrastructure — write once, rarely change                 |
+| `docker-compose.yml` | Spring Boot Gateway                        | Application — frequent code changes, restart independently |
 
 ### 5.2 端口映射 / ポートマッピング / Port Mapping
 
-| Service | Internal Port | External Port | Notes |
-|---------|--------------|---------------|-------|
-| PostgreSQL | 5432 | 5432 | pgvector enabled |
-| Neo4j | 7687 (Bolt), 7474 (HTTP) | 7687 | No external HTTP |
-| Meilisearch | 7700 | 7700 | HTTP API |
-| LanguageTool | 8010 | 8010 | HTTP POST /v2/check |
-| Gateway | 8080 | 8080 | MCP endpoint |
+| Service      | Internal Port            | External Port | Notes               |
+|--------------|--------------------------|---------------|---------------------|
+| PostgreSQL   | 5432                     | 5432          | pgvector enabled    |
+| ArcadeDB     | 7687 (Bolt), 7474 (HTTP) | 7687          | No external HTTP    |
+| Meilisearch  | 7700                     | 7700          | HTTP API            |
+| LanguageTool | 8010                     | 8010          | HTTP POST /v2/check |
+| Gateway      | 8080                     | 8080          | MCP endpoint        |
 
 **CN**：所有服务绑定 localhost，不走 TLS。内部网络用 Docker network，外部只暴露 Gateway 的 8080 端口。写作机通过 HTTP 调用服务器 IP 的 8080 端口。
 
@@ -1188,39 +1188,40 @@ ALTER TABLE characters ADD COLUMN voice_meta JSONB DEFAULT '{}';
 
 **CN**
 
-| 组件 | 隔离方式 | 操作 |
-|------|---------|------|
-| PostgreSQL | `project_id` 列 | WHERE 子句 + 外键 ON DELETE CASCADE |
-| pgvector | 同上 | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
-| 全文搜索 | 同上 | 列级别，天然隔离 |
-| Neo4j | `project_id` 属性 | `WHERE n.project_id = $pid` |
-| Ollama | 无状态 | 不存储项目数据，无需隔离 |
+| 组件         | 隔离方式           | 操作                                                    |
+|------------|----------------|-------------------------------------------------------|
+| PostgreSQL | `project_id` 列 | WHERE 子句 + 外键 ON DELETE CASCADE                       |
+| pgvector   | 同上             | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
+| 全文搜索       | 同上             | 列级别，天然隔离                                              |
+| ArcadeDB   | 物理租户           | 每个项目独立 database                                       |
+| Ollama     | 无状态            | 不存储项目数据，无需隔离                                          |
 
 **JP**
 
-| コンポーネント | 分離方法 | 操作 |
-|--------------|---------|------|
-| PostgreSQL | `project_id` カラム | WHERE 句＋外部キー ON DELETE CASCADE |
-| pgvector | 同上 | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
-| 全文検索 | 同上 | カラムレベル、天然の分離 |
-| Neo4j | `project_id` プロパティ | `WHERE n.project_id = $pid` |
-| Ollama | ステートレス | プロジェクトデータを保存しないため分離不要 |
+| コンポーネント    | 分離方法             | 操作                                                    |
+|------------|------------------|-------------------------------------------------------|
+| PostgreSQL | `project_id` カラム | WHERE 句＋外部キー ON DELETE CASCADE                        |
+| pgvector   | 同上               | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
+| 全文検索       | 同上               | カラムレベル、天然の分離                                          |
+| ArcadeDB   | 物理テナント           | 各プロジェクト独立 database                                    |
+| Ollama     | ステートレス           | プロジェクトデータを保存しないため分離不要                                 |
 
 **EN**
 
-| Component | Isolation Method | Operations |
-|-----------|-----------------|------------|
-| PostgreSQL | `project_id` column | WHERE clause + FK ON DELETE CASCADE |
-| pgvector | Same | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
-| Full-text search | Same | Column-level, naturally isolated |
-| Neo4j | `project_id` property | `WHERE n.project_id = $pid` |
-| Ollama | Stateless | No project data stored, no isolation needed |
+| Component        | Isolation Method    | Operations                                            |
+|------------------|---------------------|-------------------------------------------------------|
+| PostgreSQL       | `project_id` column | WHERE clause + FK ON DELETE CASCADE                   |
+| pgvector         | Same                | `WHERE project_id = $pid ORDER BY embedding <=> $vec` |
+| Full-text search | Same                | Column-level, naturally isolated                      |
+| ArcadeDB         | Physical tenant     | Per-project database                                  |
+| Ollama           | Stateless           | No project data stored, no isolation needed           |
 
-**CN 项目上限**：10 个项目以内——标签隔离完全够用。Neo4j 在几千节点级别没有任何性能问题。
+**CN 项目上限**：10 个项目以内——物理租户完全够用。ArcadeDB 在几千节点级别没有任何性能问题。
 
-**JP プロジェクト上限**：10 プロジェクト以内——タグ分離で十分。Neo4j は数千ノードレベルでは性能問題なし。
+**JP プロジェクト上限**：10 プロジェクト以内——物理テナントで十分。ArcadeDB は数千ノードレベルでは性能問題なし。
 
-**EN Project Limit**: Up to 10 projects — tag isolation is sufficient. Neo4j has no performance issues at thousands of nodes.
+**EN Project Limit**: Up to 10 projects — physical tenant is sufficient. ArcadeDB has no performance issues at thousands
+of nodes.
 
 ---
 
@@ -1296,11 +1297,11 @@ ALTER TABLE characters ADD COLUMN voice_meta JSONB DEFAULT '{}';
   -[:CAUSED_BY {note:"时间闭环"}]-> (Event: 未来的哈利救自己)
 ```
 
-**CN**：主时间线 + 回忆线 + 时间闭环，通过 Neo4j 关系连接。
+**CN**：主时间线 + 回忆线 + 时间闭环，通过 ArcadeDB 关系连接。
 
-**JP**：メインタイムライン＋回想線＋時間ループ、Neo4j 関係で接続。
+**JP**：メインタイムライン＋回想線＋時間ループ、ArcadeDB 関係で接続。
 
-**EN**：Main timeline + flashback line + time loop, connected via Neo4j relationships.
+**EN**：Main timeline + flashback line + time loop, connected via ArcadeDB relationships.
 
 ### 13.2.1 物品图谱 / アイテムグラフ / Item Graph
 
@@ -1317,13 +1318,14 @@ ALTER TABLE characters ADD COLUMN voice_meta JSONB DEFAULT '{}';
   -[:RELATED_TO]-> (:Item {name:"分院帽"})
 ```
 
-**CN**：物品作为 Neo4j 节点，与人物（OWNS/SEEKS/FORGED_BY）、地点（CONTAINS）、其他物品（RELATED_TO）构成关系图谱。`item_query`
+**CN**：物品作为 ArcadeDB 节点，与人物（OWNS/SEEKS/FORGED_BY）、地点（CONTAINS）、其他物品（RELATED_TO）构成关系图谱。`item_query`
 返回当前图谱关联。
 
-**JP**：アイテムを Neo4j ノードとして、キャラクター（OWNS/SEEKS/FORGED_BY）、ロケーション（CONTAINS）、他アイテム（RELATED_TO）と関係グラフを構成。
+**JP**：アイテムを ArcadeDB ノードとして、キャラクター（OWNS/SEEKS/FORGED_BY）、ロケーション（CONTAINS）、他アイテム（RELATED_TO）と関係グラフを構成。
 `item_query` が現在のグラフ関連を返す。
 
-**EN**：Items as Neo4j nodes, forming a relationship graph with Characters (OWNS/SEEKS/FORGED_BY), Locations (CONTAINS),
+**EN**：Items as ArcadeDB nodes, forming a relationship graph with Characters (OWNS/SEEKS/FORGED_BY), Locations (
+CONTAINS),
 and other Items (RELATED_TO). `item_query` returns current graph relations.
 
 ### 13.3 时间线检查 / タイムラインチェック / Timeline Check
@@ -1393,7 +1395,8 @@ public class ProjectCommands {
 ### Phase 0 — 骨架 / スケルトン / Skeleton（2-3 周 / 週 / weeks）
 
 **CN**
-- [ ] Docker Compose：PG16+pgvector, Neo4j5, Meilisearch, LanguageTool, Ollama
+
+- [ ] Docker Compose：PG16+pgvector, ArcadeDB5, Meilisearch, LanguageTool, Ollama
 - [ ] PG 初始化脚本（仅启用 pgvector 扩展——不需要 zhparser）
 - [ ] Meilisearch 索引初始化（`novel_chapters` 索引 + filterableAttributes）+ 定义降级 ILIKE 后备
 - [ ] Ollama 拉取 bge-m3
@@ -1406,7 +1409,8 @@ public class ProjectCommands {
 - [ ] Obsidian Vault 目录结构确认
 
 **JP**
-- [ ] Docker Compose：PG16+pgvector, Neo4j5, Meilisearch, LanguageTool, Ollama
+
+- [ ] Docker Compose：PG16+pgvector, ArcadeDB5, Meilisearch, LanguageTool, Ollama
 - [ ] PG 初期化スクリプト（pgvector 拡張のみ有効化——zhparser は不要）
 - [ ] Meilisearch 索引初期化（`novel_chapters` 索引 + filterableAttributes）+ ILIKE フォールバック定義
 - [ ] Ollama で bge-m3 をプル
@@ -1419,7 +1423,8 @@ public class ProjectCommands {
 - [ ] Obsidian Vault ディレクトリ構成確認
 
 **EN**
-- [ ] Docker Compose: PG16+pgvector, Neo4j5, Meilisearch, LanguageTool, Ollama
+
+- [ ] Docker Compose: PG16+pgvector, ArcadeDB5, Meilisearch, LanguageTool, Ollama
 - [ ] PG init script (enable pgvector only — no zhparser needed)
 - [ ] Meilisearch index init (`novel_chapters` index + filterableAttributes) + define ILIKE fallback
 - [ ] Pull bge-m3 via Ollama
@@ -1442,8 +1447,9 @@ public class ProjectCommands {
 ### Phase 1 — 图 + 人物 + 版本 / グラフ＋キャラ＋バージョン / Graph + Characters + Versions（2 周 / 週 / weeks）
 
 **CN**
-- [ ] Neo4j 节点/关系创建（`chapter_sync` 集成）
-- [ ] `items` 表 + `:Item` Neo4j 节点创建（`item_register` 集成）
+
+- [ ] ArcadeDB 节点/关系创建（`chapter_sync` 集成）
+- [ ] `items` 表 + `:Item` ArcadeDB 节点创建（`item_register` 集成）
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` 版本历史
@@ -1451,8 +1457,9 @@ public class ProjectCommands {
 - [ ] Spring Shell CLI 基础命令
 
 **JP**
-- [ ] Neo4j ノード/関係作成（`chapter_sync` 統合）
-- [ ] `items` テーブル＋`:Item` Neo4j ノード作成（`item_register` 統合）
+
+- [ ] ArcadeDB ノード/関係作成（`chapter_sync` 統合）
+- [ ] `items` テーブル＋`:Item` ArcadeDB ノード作成（`item_register` 統合）
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` バージョン履歴
@@ -1460,8 +1467,9 @@ public class ProjectCommands {
 - [ ] Spring Shell CLI 基本コマンド
 
 **EN**
-- [ ] Neo4j node/relationship creation (`chapter_sync` integration)
-- [ ] `items` table + `:Item` Neo4j node creation (`item_register` integration)
+
+- [ ] ArcadeDB node/relationship creation (`chapter_sync` integration)
+- [ ] `items` table + `:Item` ArcadeDB node creation (`item_register` integration)
 - [ ] `graph_query` / `graph_path`
 - [ ] `character_save` / `character_snapshot` / `character_status`
 - [ ] `chapter_versions` version history
@@ -1505,21 +1513,21 @@ public class ProjectCommands {
 - [ ] `canon_search`（RAG）
 - [ ] `timeline_create` / `timeline_event_add`
 - [ ] `timeline_check`
-- [ ] Neo4j 时间线关系（BELONGS_TO, CAUSED_BY, TIME_TRAVEL）
+- [ ] ArcadeDB 时间线关系（BELONGS_TO, CAUSED_BY, TIME_TRAVEL）
 
 **JP**
 - [ ] `canon_import`（手動＋Ollama 3B 半自動）
 - [ ] `canon_search`（RAG）
 - [ ] `timeline_create` / `timeline_event_add`
 - [ ] `timeline_check`
-- [ ] Neo4j タイムライン関係（BELONGS_TO, CAUSED_BY, TIME_TRAVEL）
+- [ ] ArcadeDB タイムライン関係（BELONGS_TO, CAUSED_BY, TIME_TRAVEL）
 
 **EN**
 - [ ] `canon_import` (manual + Ollama 3B semi-auto)
 - [ ] `canon_search` (RAG)
 - [ ] `timeline_create` / `timeline_event_add`
 - [ ] `timeline_check`
-- [ ] Neo4j timeline relationships (BELONGS_TO, CAUSED_BY, TIME_TRAVEL)
+- [ ] ArcadeDB timeline relationships (BELONGS_TO, CAUSED_BY, TIME_TRAVEL)
 
 ---
 

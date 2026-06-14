@@ -3,11 +3,13 @@ package com.novelweaver.service;
 /*
  * Universe Service / 宇宙管理 / 宇宙管理
  *
- * CN 宇宙创建、列表、关联
- * JP 宇宙作成、一覧、関連付け
- * EN Universe create, list, link
+ * CN 宇宙创建、列表、关联 — 图部分使用 ArcadeDB（物理租户，无需 project_id 过滤）
+ * JP 宇宙作成、一覧、関連付け — グラフ部分は ArcadeDB を使用
+ * EN Universe create, list, link — graph via ArcadeDB (physical tenant)
  */
 
+import com.arcadedb.remote.RemoteDatabase;
+import com.novelweaver.config.ArcadeDBManager;
 import com.novelweaver.model.Project;
 import com.novelweaver.model.Universe;
 import com.novelweaver.model.UniverseRelation;
@@ -18,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,24 +34,17 @@ public class UniverseService {
     private final UniverseRepository universes;
     private final UniverseRelationRepository relations;
     private final ProjectRepository projects;
-    private final Neo4jClient neo4j;
+    private final ArcadeDBManager arcadeDB;
 
     public UniverseService(UniverseRepository universes, UniverseRelationRepository relations,
-                           ProjectRepository projects, Neo4jClient neo4j) {
+                           ProjectRepository projects, ArcadeDBManager arcadeDB) {
         this.universes = universes;
         this.relations = relations;
         this.projects = projects;
-        this.neo4j = neo4j;
+        this.arcadeDB = arcadeDB;
     }
 
 
-    /*
-     * 创建宇宙 / 作成 / Create
-     *
-     * CN 创建宇宙（原创/同人/融合）
-     * JP 宇宙を作成（オリジナル/二次創作/クロスオーバー）
-     * EN Create a universe (original/fanfic/crossover)
-     */
     @McpTool(name = "universe_create", description = "创建宇宙——一个项目可有多个宇宙（原创/同人/融合），每个宇宙可有自己的时间线、人物画像、正典 | CN 创建宇宙 / JP 新しい宇宙を作成 / EN Create universe")
     @Transactional
     public UniverseCreateResult create(
@@ -75,31 +69,18 @@ public class UniverseService {
         u.setUpdatedAt(Instant.now());
         universes.save(u);
 
-        // Neo4j: create :Universe node
-        try {
-            neo4j.query("""
-                            MERGE (u:Universe {project_id: $pid, name: $name})
-                            SET u.type = $type
-                            """)
-                    .bind(projectId).to("pid")
-                    .bind(name).to("name")
-                    .bind(type).to("type")
-                    .run();
+        // ArcadeDB: create :Universe node (no project_id filter — physical tenant)
+        try (RemoteDatabase db = arcadeDB.open(projectId)) {
+            db.command("cypher", "MERGE (u:Universe {name: $name}) SET u.type = $type",
+                    Map.of("name", name, "type", type));
         } catch (Exception e) {
-            log.warn("Neo4j universe node creation failed for {}/{}", projectId, name, e);
+            log.warn("ArcadeDB universe node creation failed for {}/{}", projectId, name, e);
         }
 
         return new UniverseCreateResult("ok", u.getId().toString(), name, type);
     }
 
 
-    /*
-     * 宇宙列表 / 一覧 / List
-     *
-     * CN 列出项目所有宇宙
-     * JP プロジェクトの全宇宙を一覧
-     * EN List all universes in project
-     */
     @McpTool(name = "universe_list", description = "列出项目的所有宇宙 | CN 列出所有宇宙 / JP 全宇宙を一覧 / EN List all universes")
     public UniverseListResult list(
             @McpToolParam(description = "项目ID", required = true) String projectId) {
@@ -121,13 +102,6 @@ public class UniverseService {
     }
 
 
-    /*
-     * 关联宇宙 / 関連付け / Link
-     *
-     * CN 连接两个宇宙（平行/衍生/跨界）
-     * JP 2つの宇宙を関連付け（並行/派生/クロス）
-     * EN Link two universes (parallel/derived/crossover)
-     */
     @McpTool(name = "universe_link", description = "连接两个宇宙——表示平行、衍生或跨界关系 | CN 连接两个宇宙 / JP 2つの宇宙を関連付け / EN Link two universes")
     @Transactional
     public UniverseLinkResult link(
@@ -153,20 +127,15 @@ public class UniverseService {
         r.setCreatedAt(Instant.now());
         relations.save(r);
 
-        // Neo4j: create relationship between :Universe nodes
-        try {
-            neo4j.query("""
-                            MATCH (a:Universe {project_id: $pid, name: $fromName})
-                            MATCH (b:Universe {project_id: $pid, name: $toName})
+        try (RemoteDatabase db = arcadeDB.open(projectId)) {
+            db.command("cypher", """
+                            MATCH (a:Universe {name: $fromName})
+                            MATCH (b:Universe {name: $toName})
                             MERGE (a)-[:RELATED_TO {type: $relType}]->(b)
-                            """)
-                    .bind(projectId).to("pid")
-                    .bind(from.getName()).to("fromName")
-                    .bind(to.getName()).to("toName")
-                    .bind(relationType).to("relType")
-                    .run();
+                            """,
+                    Map.of("fromName", from.getName(), "toName", to.getName(), "relType", relationType));
         } catch (Exception e) {
-            log.warn("Neo4j universe link failed for {}/{}->{}", projectId, from.getName(), to.getName(), e);
+            log.warn("ArcadeDB universe link failed for {}/{}->{}", projectId, from.getName(), to.getName(), e);
         }
 
         return new UniverseLinkResult("ok", r.getId().toString(),

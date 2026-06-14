@@ -3,12 +3,14 @@ package com.novelweaver.service;
 /*
  * Character Service / 人物管理 / キャラクター管理
  *
- * CN 人物画像、状态快照、冲突检测
- * JP キャラクタープロフィール、状態スナップショット、競合検出
- * EN Character profile, snapshot, conflict detection
+ * CN 人物画像、状态快照、冲突检测 — 图部分使用 ArcadeDB（物理租户）
+ * JP キャラクタープロフィール、状態スナップショット — グラフは ArcadeDB
+ * EN Character profile, snapshot — graph via ArcadeDB (physical tenant)
  */
 
+import com.arcadedb.remote.RemoteDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.novelweaver.config.ArcadeDBManager;
 import com.novelweaver.model.Chapter;
 import com.novelweaver.model.CharacterProfile;
 import com.novelweaver.model.CharacterSnapshot;
@@ -21,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,20 +39,19 @@ public class CharacterService {
     private final ChapterRepository chapters;
     private final ProjectRepository projects;
     private final ObjectMapper mapper;
-    private final Neo4jClient neo4j;
+    private final ArcadeDBManager arcadeDB;
 
     public CharacterService(CharacterProfileRepository profiles, CharacterSnapshotRepository snapshots,
                             ChapterRepository chapters, ProjectRepository projects,
-                            ObjectMapper mapper, Neo4jClient neo4j) {
+                            ObjectMapper mapper, ArcadeDBManager arcadeDB) {
         this.profiles = profiles;
         this.snapshots = snapshots;
         this.chapters = chapters;
         this.projects = projects;
         this.mapper = mapper;
-        this.neo4j = neo4j;
+        this.arcadeDB = arcadeDB;
     }
 
-    // ── helper: serialize identity map → JSON string ──
     private String identityToString(Map<String, Object> identity) {
         if (identity == null || identity.isEmpty()) return "{}";
         try {
@@ -61,7 +61,6 @@ public class CharacterService {
         }
     }
 
-    // ── helper: create a new CharacterProfile with defaults ──
     private CharacterProfile newProfile(Project proj, String name, String identity) {
         CharacterProfile c = new CharacterProfile();
         c.setProject(proj);
@@ -71,18 +70,14 @@ public class CharacterService {
         return c;
     }
 
-    // ── helper: resolve single profile by name + optional identity ──
     private CharacterProfile resolveProfile(Project proj, String name, Map<String, Object> identity, boolean forWrite) {
         String idJson = identityToString(identity);
         if (!idJson.equals("{}")) {
-            return profiles.findByProjectAndNameAndIdentity(proj, name, idJson)
-                    .orElse(null);
+            return profiles.findByProjectAndNameAndIdentity(proj, name, idJson).orElse(null);
         }
-        // No identity → find by name only
         List<CharacterProfile> matches = profiles.findByProjectAndName(proj, name);
         if (matches.isEmpty()) return null;
         if (matches.size() == 1) return matches.get(0);
-        // Multiple matches without identity — ambiguous
         List<String> ids = matches.stream()
                 .map(c -> "  - " + c.getName() + " [" + (c.getIdentity() != null ? c.getIdentity() : "{}") + "]")
                 .toList();
@@ -91,13 +86,6 @@ public class CharacterService {
                         + String.join("\n", ids));
     }
 
-    /*
-     * 保存画像 / 保存 / Save
-     *
-     * CN 创建/更新人物画像，含声线约束。identity 用于区分同名角色。
-     * JP キャラクタープロフィールを作成/更新、声色制約を含む
-     * EN Create/update character profile with voice constraints
-     */
     @McpTool(name = "character_save", description = "创建/更新人物画像 | CN 创建/更新人物画像 / JP キャラクタープロフィール作成/更新 / EN Create/update character")
     @Transactional
     public CharacterSaveResult save(
@@ -107,7 +95,7 @@ public class CharacterService {
             @McpToolParam(description = "性格特征", required = false) List<String> traits,
             @McpToolParam(description = "声线种子台词", required = false) List<String> voiceSeeds,
             @McpToolParam(description = "声线硬约束 JSON", required = false) Map<String, Object> voiceMeta,
-            @McpToolParam(description = "身份标识 JSON（区分同名角色，如 {\"generation\":1}）", required = false) Map<String, Object> identity) {
+            @McpToolParam(description = "身份标识 JSON", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
@@ -116,30 +104,19 @@ public class CharacterService {
         CharacterProfile cp;
 
         if (!idJson.equals("{}")) {
-            // With identity: find exact match or create new
             cp = profiles.findByProjectAndNameAndIdentity(proj, name, idJson)
-                    .orElseGet(() -> {
-                        CharacterProfile c = new CharacterProfile();
-                        c.setProject(proj);
-                        c.setName(name);
-                        c.setIdentity(idJson);
-                        c.setCreatedAt(Instant.now());
-                        return c;
-                    });
+                    .orElseGet(() -> newProfile(proj, name, idJson));
         } else {
-            // Without identity (legacy): find by name, upsert if unique
             List<CharacterProfile> matches = profiles.findByProjectAndName(proj, name);
             if (matches.size() > 1) {
                 List<String> ids = matches.stream()
                         .map(c -> "  - identity: " + (c.getIdentity() != null ? c.getIdentity() : "{}"))
                         .toList();
                 throw new IllegalArgumentException(
-                        "Multiple characters named '" + name + "' exist. Please specify identity to disambiguate:\n"
+                        "Multiple characters named '" + name + "' exist. Please specify identity:\n"
                                 + String.join("\n", ids));
             }
-            cp = matches.isEmpty()
-                    ? newProfile(proj, name, "{}")
-                    : matches.get(0);
+            cp = matches.isEmpty() ? newProfile(proj, name, "{}") : matches.get(0);
         }
 
         if (bio != null) cp.setBio(bio);
@@ -164,18 +141,11 @@ public class CharacterService {
         return new CharacterSaveResult("ok", cp.getId().toString(), name, "saved");
     }
 
-    /*
-     * 查询状态 / 照会 / Status
-     *
-     * CN 查询角色当前状态 + 历史快照。同名时传 identity 精确匹配；不传 identity 返回全部匹配。
-     * JP キャラクターの現在状態 + 履歴スナップショット
-     * EN Query character current status + history
-     */
     @McpTool(name = "character_status", description = "获取角色当前状态 + 历史快照 | CN 查询角色状态 / JP キャラクター状態照会 / EN Query character status")
     public CharacterStatusResult status(
             @McpToolParam(description = "项目ID", required = true) String projectId,
             @McpToolParam(description = "角色名", required = true) String name,
-            @McpToolParam(description = "身份标识 JSON（区分同名角色，不传则返回全部匹配）", required = false) Map<String, Object> identity) {
+            @McpToolParam(description = "身份标识 JSON", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
@@ -194,46 +164,31 @@ public class CharacterService {
             return new CharacterStatusResult("not_found", name, null, List.of(), List.of());
         }
 
-        // Build profile list
         List<ProfileInfo> profileList = new ArrayList<>();
         List<SnapshotInfo> history = new ArrayList<>();
 
         for (CharacterProfile cp : matches) {
-            ProfileInfo pi = new ProfileInfo(
-                    cp.getId().toString(), name, cp.getBio(), cp.getVoice(),
+            ProfileInfo pi = new ProfileInfo(cp.getId().toString(), name, cp.getBio(), cp.getVoice(),
                     cp.getVoiceSeeds() != null ? Arrays.asList(cp.getVoiceSeeds()) : List.of(),
-                    cp.getType(),
-                    cp.getIdentity() != null ? cp.getIdentity() : "{}");
+                    cp.getType(), cp.getIdentity() != null ? cp.getIdentity() : "{}");
             profileList.add(pi);
 
             List<CharacterSnapshot> snaps = snapshots.findByProjectAndCharacterNameIn(proj, List.of(name));
             for (CharacterSnapshot s : snaps) {
                 if (s.getCharacter().getId().equals(cp.getId())) {
-                    history.add(new SnapshotInfo(
-                            s.getChapter().getChapterNumber(),
-                            s.getPhysicalLocation(),
-                            s.getPhysicalStatus(),
-                            s.getCorePsychology(),
+                    history.add(new SnapshotInfo(s.getChapter().getChapterNumber(), s.getPhysicalLocation(),
+                            s.getPhysicalStatus(), s.getCorePsychology(),
                             s.getKeyItems() != null ? Arrays.asList(s.getKeyItems()) : List.of(),
                             s.getSummary()));
                 }
             }
         }
 
-        String status = matches.size() > 1 && identity == null ? "multiple" : "ok";
-        return new CharacterStatusResult(status, name, profileList.get(0), history,
+        String st = matches.size() > 1 && identity == null ? "multiple" : "ok";
+        return new CharacterStatusResult(st, name, profileList.get(0), history,
                 matches.size() > 1 ? profileList : List.of());
     }
 
-    // ── serialization ──
-
-    /*
-     * 记录快照 / 記録 / Snapshot
-     *
-     * CN 记录一章后角色状态快照
-     * JP 章終了後のキャラクター状態を記録
-     * EN Record character state after a chapter
-     */
     @McpTool(name = "character_snapshot", description = "记录一章后的人物状态 | CN 记录角色快照 / JP キャラクター状態記録 / EN Record character snapshot")
     @Transactional
     public CharacterSnapshotResult snapshot(
@@ -245,7 +200,7 @@ public class CharacterService {
             @McpToolParam(description = "心理状态", required = false) String psychology,
             @McpToolParam(description = "关键物品", required = false) List<String> items,
             @McpToolParam(description = "状态摘要", required = false) String summary,
-            @McpToolParam(description = "身份标识 JSON（区分同名角色）", required = false) Map<String, Object> identity) {
+            @McpToolParam(description = "身份标识 JSON", required = false) Map<String, Object> identity) {
 
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
@@ -276,36 +231,25 @@ public class CharacterService {
         cs.setUpdatedAt(Instant.now());
         snapshots.save(cs);
 
-        // Neo4j: record character visited location
+        // ArcadeDB: record character visited location
         if (location != null && !location.isBlank()) {
-            try {
+            try (RemoteDatabase db = arcadeDB.open(projectId)) {
                 String idJson = cp.getIdentity() != null ? cp.getIdentity() : "{}";
-                neo4j.query("""
-                                MERGE (c:Character {project_id: $pid, name: $charName, identity: $identity})
-                                MERGE (loc:Location {project_id: $pid, name: $locName})
+                db.command("cypher", """
+                                MERGE (c:Character {name: $charName, identity: $identity})
+                                MERGE (loc:Location {name: $locName})
                                 MERGE (c)-[:VISITED]->(loc)
-                                """)
-                        .bind(projectId).to("pid")
-                        .bind(name).to("charName")
-                        .bind(idJson).to("identity")
-                        .bind(location).to("locName")
-                        .run();
+                                """,
+                        Map.of("charName", name, "identity", idJson, "locName", location));
             } catch (Exception e) {
-                log.warn("Neo4j VISITED edge failed for {}/{} -> {}", projectId, name, location, e);
+                log.warn("ArcadeDB VISITED edge failed for {}/{} -> {}", projectId, name, location, e);
             }
         }
 
         return new CharacterSnapshotResult("ok", name, chapterNumber);
     }
 
-    /*
-     * 冲突检测 / 競合検出 / Conflict check
-     *
-     * CN 检测修改某章会影响哪些后续快照
-     * JP 章の修正が後続スナップショットに与える影響を検出
-     * EN Detect which later snapshots are affected by a chapter change
-     */
-    @McpTool(name = "character_snapshot_check", description = "检测修改某章会影响哪些后续角色的快照——给定要修改的章节号，查出该章涉及的角色在哪些后续章节有快照 | CN 检测修改影响 / JP 変更の影響を検出 / EN Detect modification impact")
+    @McpTool(name = "character_snapshot_check", description = "检测修改影响 | CN 检测修改影响 / JP 変更の影響を検出 / EN Detect modification impact")
     public SnapshotCheckResult snapshotCheck(
             @McpToolParam(description = "项目ID", required = true) String projectId,
             @McpToolParam(description = "要修改的章节号", required = true) int modifiedChapter) {
@@ -313,17 +257,14 @@ public class CharacterService {
         Project proj = projects.findById(UUID.fromString(projectId))
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-        // 1. 找出该章节涉及的所有角色
         List<String> charNames = snapshots.findCharacterNamesInChapter(proj, modifiedChapter);
         if (charNames.isEmpty()) {
             return new SnapshotCheckResult(modifiedChapter, List.of(),
                     "第" + modifiedChapter + "章没有角色快照记录，无需检查");
         }
 
-        // 2. 找出这些角色在后续章节的快照
         List<CharacterSnapshot> all = snapshots.findByProjectAndCharacterNameIn(proj, charNames);
 
-        // 3. 按角色名分组，只保留 > modifiedChapter 的记录
         Map<String, List<Map<String, Object>>> affected = new LinkedHashMap<>();
         for (String name : charNames) {
             List<Map<String, Object>> laterChapters = all.stream()
@@ -339,9 +280,7 @@ public class CharacterService {
                     })
                     .sorted(Comparator.comparingInt(m -> (Integer) m.get("chapter")))
                     .toList();
-            if (!laterChapters.isEmpty()) {
-                affected.put(name, laterChapters);
-            }
+            if (!laterChapters.isEmpty()) affected.put(name, laterChapters);
         }
 
         if (affected.isEmpty()) {
@@ -349,7 +288,6 @@ public class CharacterService {
                     "第" + modifiedChapter + "章涉及的角色在后续章节中没有快照，无需检查");
         }
 
-        // 4. 组装结果
         List<Map<String, Object>> result = new ArrayList<>();
         for (var entry : affected.entrySet()) {
             Map<String, Object> r = new LinkedHashMap<>();
@@ -361,20 +299,14 @@ public class CharacterService {
         return new SnapshotCheckResult(modifiedChapter, result, null);
     }
 
-    // ── result records ──
-
     public record CharacterSaveResult(String status, String characterId, String name, String action) {
     }
-
     public record CharacterStatusResult(String status, String name, ProfileInfo profile,
-                                        List<SnapshotInfo> history,
-                                        List<ProfileInfo> allProfiles) {
+                                        List<SnapshotInfo> history, List<ProfileInfo> allProfiles) {
     }
-
     public record ProfileInfo(String id, String name, String bio, String voice,
                               List<String> voiceSeeds, String type, String identity) {
     }
-
     public record SnapshotInfo(int chapterNumber, String location, String physical,
                                String psychology, List<String> items, String summary) {
     }
